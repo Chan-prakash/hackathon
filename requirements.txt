@@ -1,0 +1,10 @@
+streamlit
+groq
+sentence-transformers
+faiss-cpu
+pandas
+numpy
+pandasql
+folium
+plotly
+python-dotenv

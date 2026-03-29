@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_b93c38febcdd401b2ec884e65e0366d9 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+<h3 align="center" style="font-size:18px;color:#333;margin-top:10px">
+    🏥 Ghana Medical Desert Map — Virtue Foundation IDP Agent
+</h3>
+    
+<div style="position:fixed;bottom:30px;left:30px;
+     z-index:1000;background:white;padding:15px;
+     border-radius:10px;border:2px solid #ccc;
+     font-size:13px;font-family:Arial">
+    <b>🏥 Medical Desert Risk</b><br><br>
+    <span style="color:red;font-size:18px">●</span> 
+    Critical Desert<br>
+    <span style="color:orange;font-size:18px">●</span> 
+    High Risk<br>
+    <span style="color:#cccc00;font-size:18px">●</span> 
+    Moderate Risk<br>
+    <span style="color:green;font-size:18px">●</span> 
+    Adequate Coverage<br>
+    <br>
+    <small>Circle size = number of facilities</small>
+</div>
+    
+            <div class="folium-map" id="map_b93c38febcdd401b2ec884e65e0366d9" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_b93c38febcdd401b2ec884e65e0366d9 = L.map(
+                "map_b93c38febcdd401b2ec884e65e0366d9",
+                {
+                    center: [7.9465, -1.0232],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 7,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_d44e32dec88d2008cf7cfaf35026c913 = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_d44e32dec88d2008cf7cfaf35026c913.addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+            var circle_marker_f656c0d986030874fd2910ad3f338355 = L.circleMarker(
+                [9.082, -1.6596],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_109bd64c1ef08ec83c2b87c6fcdc6a6a = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_c13b4d8132bc3a7796013bbf7ddec3c1 = $(`<div id="html_c13b4d8132bc3a7796013bbf7ddec3c1" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Savannah</h4>         <hr>         <b>Risk:</b> 🔴 CRITICAL DESERT<br>         <b>Facilities:</b> 1<br>         <b>Services:</b> 0/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ❌&nbsp;         <b>Surgery:</b>          ❌<br>         <b>Lab:</b>          ❌&nbsp;         <b>Imaging:</b>          ❌<br>         <hr>         <b style="color:red">         Missing: ICU, Emergency, Surgery, Maternity, Lab, Imaging, Pediatrics, Pharmacy         </b>     </div>     </div>`)[0];
+                popup_109bd64c1ef08ec83c2b87c6fcdc6a6a.setContent(html_c13b4d8132bc3a7796013bbf7ddec3c1);
+            
+        
+
+        circle_marker_f656c0d986030874fd2910ad3f338355.bindPopup(popup_109bd64c1ef08ec83c2b87c6fcdc6a6a)
+        ;
+
+        
+    
+    
+            circle_marker_f656c0d986030874fd2910ad3f338355.bindTooltip(
+                `<div>
+                     📍 Savannah | 🔴 CRITICAL DESERT | 1 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3d35759405f4eb924199beac0bef162a = L.circleMarker(
+                [7.3333, -2.3333],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_197668cee04e52e9ad34d53cf8b45121 = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_5114ad23244c4d8e9f1b78c38064a830 = $(`<div id="html_5114ad23244c4d8e9f1b78c38064a830" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Ahafo</h4>         <hr>         <b>Risk:</b> 🔴 CRITICAL DESERT<br>         <b>Facilities:</b> 3<br>         <b>Services:</b> 1/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ❌&nbsp;         <b>Surgery:</b>          ❌<br>         <b>Lab:</b>          ❌&nbsp;         <b>Imaging:</b>          ❌<br>         <hr>         <b style="color:red">         Missing: ICU, Emergency, Surgery, Lab, Imaging, Pediatrics, Pharmacy         </b>     </div>     </div>`)[0];
+                popup_197668cee04e52e9ad34d53cf8b45121.setContent(html_5114ad23244c4d8e9f1b78c38064a830);
+            
+        
+
+        circle_marker_3d35759405f4eb924199beac0bef162a.bindPopup(popup_197668cee04e52e9ad34d53cf8b45121)
+        ;
+
+        
+    
+    
+            circle_marker_3d35759405f4eb924199beac0bef162a.bindTooltip(
+                `<div>
+                     📍 Ahafo | 🔴 CRITICAL DESERT | 3 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_0d486740039992d822bf5f62a8f4c204 = L.circleMarker(
+                [8.0, 0.15],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_d677609b0feac2d122da0fe51b37536b = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_746337ad72e7ad267a908fefb25b31b0 = $(`<div id="html_746337ad72e7ad267a908fefb25b31b0" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Oti</h4>         <hr>         <b>Risk:</b> 🔴 CRITICAL DESERT<br>         <b>Facilities:</b> 3<br>         <b>Services:</b> 1/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ❌&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ❌&nbsp;         <b>Imaging:</b>          ❌<br>         <hr>         <b style="color:red">         Missing: ICU, Emergency, Maternity, Lab, Imaging, Pediatrics, Pharmacy         </b>     </div>     </div>`)[0];
+                popup_d677609b0feac2d122da0fe51b37536b.setContent(html_746337ad72e7ad267a908fefb25b31b0);
+            
+        
+
+        circle_marker_0d486740039992d822bf5f62a8f4c204.bindPopup(popup_d677609b0feac2d122da0fe51b37536b)
+        ;
+
+        
+    
+    
+            circle_marker_0d486740039992d822bf5f62a8f4c204.bindTooltip(
+                `<div>
+                     📍 Oti | 🔴 CRITICAL DESERT | 3 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_a95cc97a66f7ebc2a0a593ffa0656729 = L.circleMarker(
+                [10.7877, -0.8512],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_9c2835813d6fe7146a894fecb98bf165 = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_7b79c2035c989e697212df2eda505ca0 = $(`<div id="html_7b79c2035c989e697212df2eda505ca0" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Upper East</h4>         <hr>         <b>Risk:</b> 🔴 CRITICAL DESERT<br>         <b>Facilities:</b> 3<br>         <b>Services:</b> 2/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ❌&nbsp;         <b>Surgery:</b>          ❌<br>         <b>Lab:</b>          ❌&nbsp;         <b>Imaging:</b>          ✅<br>         <hr>         <b style="color:red">         Missing: ICU, Emergency, Surgery, Maternity, Lab, Pharmacy         </b>     </div>     </div>`)[0];
+                popup_9c2835813d6fe7146a894fecb98bf165.setContent(html_7b79c2035c989e697212df2eda505ca0);
+            
+        
+
+        circle_marker_a95cc97a66f7ebc2a0a593ffa0656729.bindPopup(popup_9c2835813d6fe7146a894fecb98bf165)
+        ;
+
+        
+    
+    
+            circle_marker_a95cc97a66f7ebc2a0a593ffa0656729.bindTooltip(
+                `<div>
+                     📍 Upper East | 🔴 CRITICAL DESERT | 3 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_1215cc692b3527450abfa4c29648ac10 = L.circleMarker(
+                [10.2529, -2.3267],
+                {"bubblingMouseEvents": true, "color": "orange", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "orange", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_d33c60edef8a8c0c2b3cc2b314cc1e88 = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_e84005e4e1010115db0c0af88966573e = $(`<div id="html_e84005e4e1010115db0c0af88966573e" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Upper West</h4>         <hr>         <b>Risk:</b> 🟠 HIGH RISK<br>         <b>Facilities:</b> 17<br>         <b>Services:</b> 3/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ❌<br>         <b>Lab:</b>          ❌&nbsp;         <b>Imaging:</b>          ❌<br>         <hr>         <b style="color:red">         Missing: ICU, Surgery, Maternity, Lab, Imaging         </b>     </div>     </div>`)[0];
+                popup_d33c60edef8a8c0c2b3cc2b314cc1e88.setContent(html_e84005e4e1010115db0c0af88966573e);
+            
+        
+
+        circle_marker_1215cc692b3527450abfa4c29648ac10.bindPopup(popup_d33c60edef8a8c0c2b3cc2b314cc1e88)
+        ;
+
+        
+    
+    
+            circle_marker_1215cc692b3527450abfa4c29648ac10.bindTooltip(
+                `<div>
+                     📍 Upper West | 🟠 HIGH RISK | 17 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_813b41f4a5989a22b6ab65f1557d549d = L.circleMarker(
+                [7.75, -1.05],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_2f04b68e0aa560c6f7e3bdce72dc3300 = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_11e5b0a27c285c62acde9eb7a652c694 = $(`<div id="html_11e5b0a27c285c62acde9eb7a652c694" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Bono East</h4>         <hr>         <b>Risk:</b> 🔴 CRITICAL DESERT<br>         <b>Facilities:</b> 3<br>         <b>Services:</b> 5/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ❌<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ❌<br>         <hr>         <b style="color:red">         Missing: ICU, Surgery, Imaging         </b>     </div>     </div>`)[0];
+                popup_2f04b68e0aa560c6f7e3bdce72dc3300.setContent(html_11e5b0a27c285c62acde9eb7a652c694);
+            
+        
+
+        circle_marker_813b41f4a5989a22b6ab65f1557d549d.bindPopup(popup_2f04b68e0aa560c6f7e3bdce72dc3300)
+        ;
+
+        
+    
+    
+            circle_marker_813b41f4a5989a22b6ab65f1557d549d.bindTooltip(
+                `<div>
+                     📍 Bono East | 🔴 CRITICAL DESERT | 3 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_22a4674975aba68fcc5ed9282fe5cf2b = L.circleMarker(
+                [6.5403, -0.4678],
+                {"bubblingMouseEvents": true, "color": "yellow", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "yellow", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_b58b1775fec792227b00b06840b5fa1f = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_15a644533ada62a9576c1b4a922dfca0 = $(`<div id="html_15a644533ada62a9576c1b4a922dfca0" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Eastern</h4>         <hr>         <b>Risk:</b> 🟡 MODERATE RISK<br>         <b>Facilities:</b> 17<br>         <b>Services:</b> 5/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ❌<br>         <hr>         <b style="color:red">         Missing: ICU, Maternity, Imaging         </b>     </div>     </div>`)[0];
+                popup_b58b1775fec792227b00b06840b5fa1f.setContent(html_15a644533ada62a9576c1b4a922dfca0);
+            
+        
+
+        circle_marker_22a4674975aba68fcc5ed9282fe5cf2b.bindPopup(popup_b58b1775fec792227b00b06840b5fa1f)
+        ;
+
+        
+    
+    
+            circle_marker_22a4674975aba68fcc5ed9282fe5cf2b.bindTooltip(
+                `<div>
+                     📍 Eastern | 🟡 MODERATE RISK | 17 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_6faae796fd06bbcb57aa992866c34147 = L.circleMarker(
+                [7.9408, -1.768],
+                {"bubblingMouseEvents": true, "color": "yellow", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "yellow", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_a656bec065e1db72ef070f8817b6b317 = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_b7393b4051713994d02e31521bca9a9c = $(`<div id="html_b7393b4051713994d02e31521bca9a9c" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Brong Ahafo</h4>         <hr>         <b>Risk:</b> 🟡 MODERATE RISK<br>         <b>Facilities:</b> 14<br>         <b>Services:</b> 5/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ❌<br>         <hr>         <b style="color:red">         Missing: ICU, Imaging, Pediatrics         </b>     </div>     </div>`)[0];
+                popup_a656bec065e1db72ef070f8817b6b317.setContent(html_b7393b4051713994d02e31521bca9a9c);
+            
+        
+
+        circle_marker_6faae796fd06bbcb57aa992866c34147.bindPopup(popup_a656bec065e1db72ef070f8817b6b317)
+        ;
+
+        
+    
+    
+            circle_marker_6faae796fd06bbcb57aa992866c34147.bindTooltip(
+                `<div>
+                     📍 Brong Ahafo | 🟡 MODERATE RISK | 14 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_b16216e48ccad9ac46f2b6738b75ecf6 = L.circleMarker(
+                [6.3, -2.8],
+                {"bubblingMouseEvents": true, "color": "orange", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "orange", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_acd4b4c7c3150d82be0815fbd7b6b5ca = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_e35e27326bfd555fdb19b3405dcb177d = $(`<div id="html_e35e27326bfd555fdb19b3405dcb177d" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Western North</h4>         <hr>         <b>Risk:</b> 🟠 HIGH RISK<br>         <b>Facilities:</b> 6<br>         <b>Services:</b> 6/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ✅<br>         <hr>         <b style="color:red">         Missing: ICU, Pediatrics         </b>     </div>     </div>`)[0];
+                popup_acd4b4c7c3150d82be0815fbd7b6b5ca.setContent(html_e35e27326bfd555fdb19b3405dcb177d);
+            
+        
+
+        circle_marker_b16216e48ccad9ac46f2b6738b75ecf6.bindPopup(popup_acd4b4c7c3150d82be0815fbd7b6b5ca)
+        ;
+
+        
+    
+    
+            circle_marker_b16216e48ccad9ac46f2b6738b75ecf6.bindTooltip(
+                `<div>
+                     📍 Western North | 🟠 HIGH RISK | 6 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_bd0ac7000c4481c2ce98eab55fe1779a = L.circleMarker(
+                [9.5404, -0.9062],
+                {"bubblingMouseEvents": true, "color": "green", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "green", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_8699d14de3b5eaa469efb7906eb5179a = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_3f0a53674ded6b470ac9f1d8b0e15099 = $(`<div id="html_3f0a53674ded6b470ac9f1d8b0e15099" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Northern</h4>         <hr>         <b>Risk:</b> 🟢 ADEQUATE<br>         <b>Facilities:</b> 27<br>         <b>Services:</b> 7/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ✅<br>         <hr>         <b style="color:red">         Missing: ICU         </b>     </div>     </div>`)[0];
+                popup_8699d14de3b5eaa469efb7906eb5179a.setContent(html_3f0a53674ded6b470ac9f1d8b0e15099);
+            
+        
+
+        circle_marker_bd0ac7000c4481c2ce98eab55fe1779a.bindPopup(popup_8699d14de3b5eaa469efb7906eb5179a)
+        ;
+
+        
+    
+    
+            circle_marker_bd0ac7000c4481c2ce98eab55fe1779a.bindTooltip(
+                `<div>
+                     📍 Northern | 🟢 ADEQUATE | 27 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_449983e61a258d7efc279eb82c9eda00 = L.circleMarker(
+                [5.5071, -1.0033],
+                {"bubblingMouseEvents": true, "color": "green", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "green", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_3f9397d7d83af0e2a642cfa1b1c746e3 = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_80c5708796342ff604eb16c614811fbf = $(`<div id="html_80c5708796342ff604eb16c614811fbf" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Central</h4>         <hr>         <b>Risk:</b> 🟢 ADEQUATE<br>         <b>Facilities:</b> 34<br>         <b>Services:</b> 7/8<br>         <hr>         <b>ICU:</b>          ✅&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ❌<br>         <hr>         <b style="color:red">         Missing: Imaging         </b>     </div>     </div>`)[0];
+                popup_3f9397d7d83af0e2a642cfa1b1c746e3.setContent(html_80c5708796342ff604eb16c614811fbf);
+            
+        
+
+        circle_marker_449983e61a258d7efc279eb82c9eda00.bindPopup(popup_3f9397d7d83af0e2a642cfa1b1c746e3)
+        ;
+
+        
+    
+    
+            circle_marker_449983e61a258d7efc279eb82c9eda00.bindTooltip(
+                `<div>
+                     📍 Central | 🟢 ADEQUATE | 34 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_f451f3ec9383f415ab33a7651e9c2b59 = L.circleMarker(
+                [5.1176, -2.0452],
+                {"bubblingMouseEvents": true, "color": "green", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "green", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 16, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_8f6575610e1a065b9f6998f63b4a7119 = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_c4b8c4f54a9476729fa698a6b9ee7c3d = $(`<div id="html_c4b8c4f54a9476729fa698a6b9ee7c3d" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Western</h4>         <hr>         <b>Risk:</b> 🟢 ADEQUATE<br>         <b>Facilities:</b> 82<br>         <b>Services:</b> 7/8<br>         <hr>         <b>ICU:</b>          ❌&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ✅<br>         <hr>         <b style="color:red">         Missing: ICU         </b>     </div>     </div>`)[0];
+                popup_8f6575610e1a065b9f6998f63b4a7119.setContent(html_c4b8c4f54a9476729fa698a6b9ee7c3d);
+            
+        
+
+        circle_marker_f451f3ec9383f415ab33a7651e9c2b59.bindPopup(popup_8f6575610e1a065b9f6998f63b4a7119)
+        ;
+
+        
+    
+    
+            circle_marker_f451f3ec9383f415ab33a7651e9c2b59.bindTooltip(
+                `<div>
+                     📍 Western | 🟢 ADEQUATE | 82 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_0395cd2b18c8100a49e49584b50e770f = L.circleMarker(
+                [5.6037, -0.187],
+                {"bubblingMouseEvents": true, "color": "green", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "green", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 40, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_3385d93637454fd758282e7f12af93d1 = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_db6dbd87b8f09f0d8787609ecb3bfc74 = $(`<div id="html_db6dbd87b8f09f0d8787609ecb3bfc74" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Greater Accra</h4>         <hr>         <b>Risk:</b> 🟢 ADEQUATE<br>         <b>Facilities:</b> 422<br>         <b>Services:</b> 8/8<br>         <hr>         <b>ICU:</b>          ✅&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ✅<br>         <hr>         <b style="color:red">         Missing: None ✅         </b>     </div>     </div>`)[0];
+                popup_3385d93637454fd758282e7f12af93d1.setContent(html_db6dbd87b8f09f0d8787609ecb3bfc74);
+            
+        
+
+        circle_marker_0395cd2b18c8100a49e49584b50e770f.bindPopup(popup_3385d93637454fd758282e7f12af93d1)
+        ;
+
+        
+    
+    
+            circle_marker_0395cd2b18c8100a49e49584b50e770f.bindTooltip(
+                `<div>
+                     📍 Greater Accra | 🟢 ADEQUATE | 422 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_76b1ced0e467c65139de1d7be19c3125 = L.circleMarker(
+                [6.747, -1.5209],
+                {"bubblingMouseEvents": true, "color": "green", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "green", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 31, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_457191ddfa2f58edb43e930c7c5552a1 = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_b857383e1db2bcc3ef0536909e5d3e44 = $(`<div id="html_b857383e1db2bcc3ef0536909e5d3e44" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Ashanti</h4>         <hr>         <b>Risk:</b> 🟢 ADEQUATE<br>         <b>Facilities:</b> 159<br>         <b>Services:</b> 8/8<br>         <hr>         <b>ICU:</b>          ✅&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ✅<br>         <hr>         <b style="color:red">         Missing: None ✅         </b>     </div>     </div>`)[0];
+                popup_457191ddfa2f58edb43e930c7c5552a1.setContent(html_b857383e1db2bcc3ef0536909e5d3e44);
+            
+        
+
+        circle_marker_76b1ced0e467c65139de1d7be19c3125.bindPopup(popup_457191ddfa2f58edb43e930c7c5552a1)
+        ;
+
+        
+    
+    
+            circle_marker_76b1ced0e467c65139de1d7be19c3125.bindTooltip(
+                `<div>
+                     📍 Ashanti | 🟢 ADEQUATE | 159 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_b6206d76cb2baa2cc34f01ab713b4ae6 = L.circleMarker(
+                [7.9465, -0.5265],
+                {"bubblingMouseEvents": true, "color": "green", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "green", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 28, "stroke": true, "weight": 3}
+            ).addTo(map_b93c38febcdd401b2ec884e65e0366d9);
+        
+    
+        var popup_bb11e1f6b39ed11873e9e5cc86c600be = L.popup({
+  "maxWidth": 250,
+});
+
+        
+            
+                var html_b52bc7c72292d8aa3bb64d8fc0aedecd = $(`<div id="html_b52bc7c72292d8aa3bb64d8fc0aedecd" style="width: 100.0%; height: 100.0%;">     <div style="width:220px;font-family:Arial">         <h4 style="color:#333">Volta</h4>         <hr>         <b>Risk:</b> 🟢 ADEQUATE<br>         <b>Facilities:</b> 142<br>         <b>Services:</b> 8/8<br>         <hr>         <b>ICU:</b>          ✅&nbsp;         <b>ER:</b>          ✅&nbsp;         <b>Surgery:</b>          ✅<br>         <b>Lab:</b>          ✅&nbsp;         <b>Imaging:</b>          ✅<br>         <hr>         <b style="color:red">         Missing: None ✅         </b>     </div>     </div>`)[0];
+                popup_bb11e1f6b39ed11873e9e5cc86c600be.setContent(html_b52bc7c72292d8aa3bb64d8fc0aedecd);
+            
+        
+
+        circle_marker_b6206d76cb2baa2cc34f01ab713b4ae6.bindPopup(popup_bb11e1f6b39ed11873e9e5cc86c600be)
+        ;
+
+        
+    
+    
+            circle_marker_b6206d76cb2baa2cc34f01ab713b4ae6.bindTooltip(
+                `<div>
+                     📍 Volta | 🟢 ADEQUATE | 142 facilities
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+</script>
+</html>
