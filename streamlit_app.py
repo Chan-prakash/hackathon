@@ -274,7 +274,7 @@ def get_llm_answer(question, results, groq_key, dynamic_stats):
 
     context = ""
     for i, r in enumerate(results, 1):
-        context += f"Hospital {i}: {r['name']} | Region: {r['region']} | Type: {r['type']} | Capabilities: {r['capability'][:100]}\n"
+        context += f"Hospital {i}: {r['name']} | Region: {r['region']} | Type: {r['type']} | Caps: {r['capability']} | Procs: {r['procedure']} | Equip: {r['equipment']}\n"
 
     prompt = f"""You are a healthcare analyst for Virtue Foundation in Ghana.
 You help NGO coordinators find hospitals and plan resource deployments.
@@ -407,26 +407,20 @@ with tab2:
                 anomaly_html = "".join(f'<div class="anomaly-flag">⚠️ {a}</div>' for a in anomalies)
                 
                 # ── SHOWING THE IDP EXTRACTED DATA ON CARDS ──
-                desc_text = r['description'][:250] + "..." if len(r['description']) > 250 else r['description']
-                desc_html = f'<div class="hospital-desc"><i>"{desc_text}"</i></div>' if desc_text else ""
-                
                 cap_html = f'<div class="hospital-data-row"><span class="hospital-data-label">Capabilities:</span> {r["capability"]}</div>' if r["capability"] else ""
                 proc_html = f'<div class="hospital-data-row"><span class="hospital-data-label">Procedures:</span> {r["procedure"]}</div>' if r["procedure"] else ""
                 equip_html = f'<div class="hospital-data-row"><span class="hospital-data-label">Equipment:</span> {r["equipment"]}</div>' if r["equipment"] else ""
                 
-                st.markdown(f"""
-                <div class="result-card">
-                    <div class="hospital-name">{r["name"]} 
-                        <span class="badge badge-{"high" if r["confidence"]=="High" else "medium" if r["confidence"]=="Medium" else "low"}">{r["confidence"]} confidence</span>
-                    </div>
-                    <div class="hospital-meta">📍 {r["region"]} · {r["city"]} · {r["type"]} · Match: {r["similarity"]:.1%}</div>
-                    {desc_html}
-                    {cap_html}
-                    {proc_html}
-                    {equip_html}
-                    {anomaly_html}
-                </div>
-                """, unsafe_allow_html=True)
+                # IMPORTANT: No leading whitespace inside this block to prevent Streamlit from turning it into a <pre> code block!
+                html_card = f"""<div class="result-card">
+<div class="hospital-name">{r["name"]} <span class="badge badge-{"high" if r["confidence"]=="High" else "medium" if r["confidence"]=="Medium" else "low"}">{r["confidence"]} confidence</span></div>
+<div class="hospital-meta">📍 {r["region"]} · {r["city"]} · {r["type"]} · Match: {r["similarity"]:.1%}</div>
+{cap_html}
+{proc_html}
+{equip_html}
+{anomaly_html}
+</div>"""
+                st.markdown(html_card, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════
 # TAB 3 — REGIONAL ANALYSIS
