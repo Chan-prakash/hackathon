@@ -3,7 +3,6 @@ __pycache__/
 .env
 .env.local
 *.pkl
-*.index
 *.npy
 .DS_Store
 venv/
