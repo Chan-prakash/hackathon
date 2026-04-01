@@ -3,11 +3,25 @@ import pandas as pd
 import numpy as np
 import os
 import json
+import ast
 import faiss
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# ─── Helper to clean stringified lists ──────────────────────
+def clean_list_string(val):
+    """Converts "['X-ray', 'MRI']" back to a clean comma-separated string."""
+    if pd.isna(val) or val in ['', 'nan', '[]', "['']", 'None']:
+        return ""
+    try:
+        parsed = ast.literal_eval(str(val))
+        if isinstance(parsed, list):
+            return ", ".join(parsed)
+    except:
+        pass
+    return str(val).replace("[", "").replace("]", "").replace("'", "").replace('"', "")
 
 # ─── Page Config ────────────────────────────────────────────
 st.set_page_config(
@@ -40,6 +54,8 @@ st.markdown("""
     .result-card .hospital-name  { font-size: 1rem; font-weight: 600; color: #1A2332; }
     .result-card .hospital-meta  { font-size: 0.8rem; color: #5A6B7F; margin-top: 0.2rem; }
     .result-card .hospital-desc  { font-size: 0.85rem; color: #3D4F5F; margin-top: 0.5rem; line-height: 1.5; }
+    .hospital-data-row { font-size: 0.85rem; color: #3D4F5F; margin-top: 0.3rem; line-height: 1.4; }
+    .hospital-data-label { font-weight: 600; color: #0D7377; }
     .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.03em; }
     .badge-high     { background: #D1FAE5; color: #065F46; }
     .badge-medium   { background: #FEF3C7; color: #92400E; }
@@ -84,6 +100,11 @@ def load_data():
         st.stop()
 
     df = df.fillna("")
+
+    # Clean the new IDP columns so they look nice
+    if 'procedure' in df.columns: df['procedure_clean'] = df['procedure'].apply(clean_list_string)
+    if 'equipment' in df.columns: df['equipment_clean'] = df['equipment'].apply(clean_list_string)
+    if 'capability' in df.columns: df['capability_clean'] = df['capability'].apply(clean_list_string)
 
     # ── Deduplication ──
     def completeness_score(row):
@@ -207,11 +228,10 @@ def load_faiss():
     index = faiss.read_index(index_path)
     return embedder, index
 
-def search_hospitals(query, df, embedder, index, top_k=20, allowed_indices=None):
-    """Searches the index and fetches top 20 results."""
+def search_hospitals(query, df, embedder, index, top_k=7, allowed_indices=None):
+    """Searches the index and fetches top results."""
     q_emb = embedder.encode([query]).astype('float32')
     
-    # If we have filters, search the entire index to guarantee we find top_k matches post-filtering
     fetch_k = len(df) if allowed_indices is not None else top_k
     distances, indices = index.search(q_emb, min(fetch_k, len(df)))
     
@@ -227,9 +247,9 @@ def search_hospitals(query, df, embedder, index, top_k=20, allowed_indices=None)
             'city':        str(row.get('address_city', '')),
             'type':        str(row.get('facilityTypeId', '')),
             'description': str(row.get('description', ''))[:300],
-            'procedure':   str(row.get('procedure', '')),
-            'capability':  str(row.get('capability', '')),
-            'equipment':   str(row.get('equipment', '')),
+            'procedure':   str(row.get('procedure_clean', '')),
+            'capability':  str(row.get('capability_clean', '')),
+            'equipment':   str(row.get('equipment_clean', '')),
             'specialties': str(row.get('specialties', '')),
             'confidence':  str(row.get('confidence', 'Medium')),
             'similarity':  round(1 / (1 + dist), 3),
@@ -247,7 +267,7 @@ def detect_anomalies(result):
     return anomalies
 
 def get_llm_answer(question, results, groq_key, dynamic_stats):
-    """Get AI answer using retrieved context and dynamic stats."""
+    """Get AI answer using retrieved context, dynamic stats, and fallback."""
     if not groq_key: return "Set the GROQ_KEY environment variable to enable AI answers."
     from groq import Groq
     client = Groq(api_key=groq_key)
@@ -272,9 +292,17 @@ Instructions:
 - Keep answer under 200 words, factual, and helpful."""
 
     try:
+        # Try the massive 70B model first
         response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], temperature=0.1)
         return response.choices[0].message.content.strip()
     except Exception as e:
+        # 429 FALLBACK LOGIC
+        if "429" in str(e):
+            try:
+                response = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "user", "content": prompt}], temperature=0.1)
+                return "*(Used high-speed fallback model due to high traffic)*\n\n" + response.choices[0].message.content.strip()
+            except Exception as fallback_e:
+                return "⚠️ Both AI models are currently rate-limited by Groq. Please wait 1 minute and try again."
         return f"Error getting AI response: {str(e)[:100]}"
 
 # ─── Execution ───────────────────────────────────────────────
@@ -353,7 +381,7 @@ with tab1:
 
 # ══════════════════════════════════════════════════════════════
 # TAB 2 — SEARCH
-# ═══════════════════════════════════��══════════════════════════
+# ═════════════════════════════════════════════════════════════
 with tab2:
     st.markdown('<div class="section-header">Search Healthcare Facilities</div>', unsafe_allow_html=True)
     query = st.text_input("Search", value=st.session_state.get('search_query', ''), placeholder="e.g. Which hospitals in Volta region have surgery?", label_visibility="collapsed")
@@ -361,9 +389,9 @@ with tab2:
     if query:
         st.session_state['search_query'] = query
         with st.spinner("Searching 987 hospitals..."):
-            # Map sidebar filters directly into allowed indices for FAISS post-filtering
             allowed_indices = set(filtered_df.index) if (selected_region != "All" or selected_type != "All") else None
-            results = [] if (allowed_indices is not None and len(allowed_indices) == 0) else search_hospitals(query, df, embedder, index, top_k=20, allowed_indices=allowed_indices)
+            # Using top_k=7 to be safe on Groq API limits
+            results = [] if (allowed_indices is not None and len(allowed_indices) == 0) else search_hospitals(query, df, embedder, index, top_k=7, allowed_indices=allowed_indices)
 
         if not results:
             st.info("No facilities found matching your search and filter criteria.")
@@ -377,9 +405,28 @@ with tab2:
             for r in results:
                 anomalies = detect_anomalies(r)
                 anomaly_html = "".join(f'<div class="anomaly-flag">⚠️ {a}</div>' for a in anomalies)
+                
+                # ── SHOWING THE IDP EXTRACTED DATA ON CARDS ──
                 desc_text = r['description'][:250] + "..." if len(r['description']) > 250 else r['description']
-                desc_html = f'<div class="hospital-desc">{desc_text}</div>' if desc_text else ""
-                st.markdown(f'<div class="result-card"><div class="hospital-name">{r["name"]} <span class="badge badge-{"high" if r["confidence"]=="High" else "medium" if r["confidence"]=="Medium" else "low"}">{r["confidence"]} confidence</span></div><div class="hospital-meta">📍 {r["region"]} · {r["city"]} · {r["type"]} · Match: {r["similarity"]:.1%}</div>{desc_html}{anomaly_html}</div>', unsafe_allow_html=True)
+                desc_html = f'<div class="hospital-desc"><i>"{desc_text}"</i></div>' if desc_text else ""
+                
+                cap_html = f'<div class="hospital-data-row"><span class="hospital-data-label">Capabilities:</span> {r["capability"]}</div>' if r["capability"] else ""
+                proc_html = f'<div class="hospital-data-row"><span class="hospital-data-label">Procedures:</span> {r["procedure"]}</div>' if r["procedure"] else ""
+                equip_html = f'<div class="hospital-data-row"><span class="hospital-data-label">Equipment:</span> {r["equipment"]}</div>' if r["equipment"] else ""
+                
+                st.markdown(f"""
+                <div class="result-card">
+                    <div class="hospital-name">{r["name"]} 
+                        <span class="badge badge-{"high" if r["confidence"]=="High" else "medium" if r["confidence"]=="Medium" else "low"}">{r["confidence"]} confidence</span>
+                    </div>
+                    <div class="hospital-meta">📍 {r["region"]} · {r["city"]} · {r["type"]} · Match: {r["similarity"]:.1%}</div>
+                    {desc_html}
+                    {cap_html}
+                    {proc_html}
+                    {equip_html}
+                    {anomaly_html}
+                </div>
+                """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════
 # TAB 3 — REGIONAL ANALYSIS
@@ -416,5 +463,21 @@ with tab5:
     dir_search = st.text_input("Filter by name or city", placeholder="e.g. Korle Bu or Tamale")
     dir_df = filtered_df[filtered_df['name'].str.lower().str.contains(dir_search.lower()) | filtered_df['address_city'].str.lower().str.contains(dir_search.lower())] if dir_search else filtered_df
     
-    display_cols = ['name', 'region_clean', 'address_city', 'facilityTypeId'] + [c for c in ['specialties', 'confidence'] if c in dir_df.columns]
-    st.dataframe(dir_df[display_cols].rename(columns={'name': 'Hospital', 'region_clean': 'Region', 'address_city': 'City', 'facilityTypeId': 'Type', 'specialties': 'Specialties', 'confidence': 'Confidence'}), use_container_width=True, hide_index=True, height=500)
+    # ── SHOWING IDP FIELDS IN THE MAIN DATA TABLE ──
+    display_cols = ['name', 'region_clean', 'address_city', 'facilityTypeId']
+    # Add new IDP columns to table if they exist
+    for c in ['capability_clean', 'procedure_clean', 'equipment_clean', 'specialties', 'confidence']:
+        if c in dir_df.columns:
+            display_cols.append(c)
+            
+    st.dataframe(dir_df[display_cols].rename(columns={
+        'name': 'Hospital', 
+        'region_clean': 'Region', 
+        'address_city': 'City', 
+        'facilityTypeId': 'Type', 
+        'specialties': 'Specialties', 
+        'confidence': 'Confidence',
+        'capability_clean': 'Capabilities',
+        'procedure_clean': 'Procedures',
+        'equipment_clean': 'Equipment'
+    }), use_container_width=True, hide_index=True, height=500)
