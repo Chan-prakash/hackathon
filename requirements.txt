@@ -6,5 +6,6 @@ pandas
 numpy
 pandasql
 folium
-plotly
+rank_bm25
 python-dotenv
+plotly
