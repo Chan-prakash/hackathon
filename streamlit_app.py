@@ -197,9 +197,9 @@ def load_data():
         df['enriched_capability'].astype(str).str.len().mean() > 10
     )
 
-    df['procedure_text']   = df['procedure'].apply(unpack_list)   if 'procedure'  in df.columns else ""
-    df['equipment_text']   = df['equipment'].apply(unpack_list)   if 'equipment'  in df.columns else ""
-    df['specialties_text'] = df['specialties'].apply(unpack_list) if 'specialties' in df.columns else ""
+    df['procedure_text']   = df['procedure'].apply(unpack_list)   if 'procedure'  in df.columns else df.get('procedure_text', "")
+    df['equipment_text']   = df['equipment'].apply(unpack_list)   if 'equipment'  in df.columns else df.get('equipment_text', "")
+    df['specialties_text'] = df['specialties'].apply(unpack_list) if 'specialties' in df.columns else df.get('specialties_text', "")
 
     if has_enriched:
         df['capability_text'] = df['enriched_capability'].apply(clean_capability)
