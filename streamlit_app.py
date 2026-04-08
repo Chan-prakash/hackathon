@@ -6,6 +6,11 @@ import json
 import ast
 import re
 from dotenv import load_dotenv
+try:
+    import folium
+    HAS_FOLIUM = True
+except ImportError:
+    HAS_FOLIUM = False
 
 load_dotenv()
 
@@ -665,9 +670,7 @@ Answer rules:
             return resp.choices[0].message.content.strip()
         except Exception as e:
             if "429" in str(e):
-                import time
-                time.sleep(10)
-                continue
+                return "⏳ AI service is temporarily busy. Your search results above are still valid — please retry in a moment."
             continue
     return "⚠️ AI model temporarily unavailable. Showing retrieved hospital data above."
 
@@ -1221,6 +1224,14 @@ if not groq_key:
     except Exception:
         pass
 
+# ── PRE-WARM SEARCH INDEX ─────────────────────────────────────────────────────
+# Builds BM25 + loads FAISS on first run so the first search query is instant.
+if 'search_index_warmed' not in st.session_state:
+    st.session_state["_search_df"] = df
+    with st.spinner("⚙️ Initialising intelligent search engine — first run only (~30 sec)…"):
+        load_search_index(len(df), str(df.columns.tolist()))
+    st.session_state['search_index_warmed'] = True
+
 # ── SIDEBAR ───────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚕️ Ghana Healthcare")
@@ -1616,27 +1627,97 @@ with tab3:
         )
 
 # ════════════════════════════════════════════════════════════════
-# TAB 4 — MAP
+# TAB 4 — MAP  (dynamic — responds to sidebar region / risk filters)
 # ════════════════════════════════════════════════════════════════
 with tab4:
     st.markdown('<div class="section-header">Medical Desert Map</div>', unsafe_allow_html=True)
-    st.caption("Color-coded by risk level: 🔴 Critical · 🟠 High Risk · 🟡 Moderate · 🟢 Adequate")
 
-    map_path = next(
-        (p for p in ["data/ghana_map.html", "ghana_map.html"] if os.path.exists(p)),
-        None
+    _filter_parts = []
+    if selected_region != 'All': _filter_parts.append(f"Region: **{selected_region}**")
+    if selected_risk   != 'All': _filter_parts.append(f"Risk: **{selected_risk}**")
+    st.caption(
+        "Filtered by: " + " · ".join(_filter_parts)
+        if _filter_parts else
+        "Color-coded by risk level: 🔴 Critical · 🟠 High Risk · 🟡 Moderate · 🟢 Adequate"
     )
-    if map_path:
-        with open(map_path, 'r', encoding='utf-8') as f:
-            st.components.v1.html(f.read(), height=600, scrolling=False)
+
+    _REGION_COORDS = {
+        'Greater Accra': (5.6037, -0.1870), 'Ashanti':       (6.7470, -1.5209),
+        'Western':       (5.1176, -2.0452), 'Central':       (5.5071, -1.0033),
+        'Eastern':       (6.5403, -0.4678), 'Northern':      (9.5404, -0.9062),
+        'Volta':         (7.9465, -0.5265), 'Brong Ahafo':   (7.9408, -1.7680),
+        'Upper East':    (10.7877, -0.8512),'Upper West':    (10.2529, -2.3267),
+        'Savannah':      (9.0820, -1.6596), 'North East':    (10.5500, -0.3667),
+        'Oti':           (8.0000,  0.1500), 'Ahafo':         (7.3333, -2.3333),
+        'Bono East':     (7.7500, -1.0500), 'Western North': (6.3000, -2.8000),
+    }
+    _RISK_COLORS = {
+        'Critical': 'red', 'High Risk': 'orange',
+        'Moderate': 'beige', 'Adequate': 'green',
+    }
+
+    if HAS_FOLIUM:
+        _map_gap = gap_df.copy()
+        if selected_region != 'All':
+            _map_gap = _map_gap[_map_gap['region_clean'] == selected_region]
+        if selected_risk != 'All':
+            _map_gap = _map_gap[_map_gap['risk_level'] == selected_risk]
+
+        if selected_region != 'All' and selected_region in _REGION_COORDS:
+            _mc, _mz = list(_REGION_COORDS[selected_region]), 9
+        else:
+            _mc, _mz = [7.9465, -1.0232], 7
+
+        _tiles = 'CartoDB dark_matter' if is_dark else 'CartoDB positron'
+        _dyn_map = folium.Map(location=_mc, zoom_start=_mz, tiles=_tiles)
+
+        for _, _row in _map_gap.iterrows():
+            _reg = _row['region_clean']
+            if _reg not in _REGION_COORDS:
+                continue
+            _lat, _lon = _REGION_COORDS[_reg]
+            _risk   = _row['risk_level']
+            _color  = _RISK_COLORS.get(_risk, 'gray')
+            _ngo_c  = int(_row.get('ngo_count', 0))
+            _miss   = [s for s in services_dict if not _row.get(f'has_{s}', False)]
+            _miss_str = ', '.join(_miss) if _miss else 'None ✅'
+            _popup_html = (
+                f'<div style="width:230px;font-family:Arial;font-size:13px">'
+                f'<h4 style="color:#333;margin:0 0 6px">{_reg}</h4>'
+                f'<hr style="margin:4px 0">'
+                f'<b>Risk:</b> {_risk}<br>'
+                f'<b>Facilities:</b> {int(_row["total_facilities"])} &nbsp;|&nbsp; <b>NGOs:</b> {_ngo_c}<br>'
+                f'<b>Services:</b> {int(_row["services_available"])}/8<br>'
+                f'<hr style="margin:4px 0">'
+                f'<b style="color:{"red" if _miss else "green"}">'
+                f'Missing: {_miss_str}</b></div>'
+            )
+            _radius = max(8, min(40, int(_row['total_facilities']) // 5))
+            folium.CircleMarker(
+                location=[_lat, _lon], radius=_radius,
+                color=_color, fill=True, fill_color=_color, fill_opacity=0.7,
+                popup=folium.Popup(_popup_html, max_width=260),
+                tooltip=f"📍 {_reg} | {_risk} | {int(_row['total_facilities'])} facilities"
+            ).add_to(_dyn_map)
+
+        st.components.v1.html(_dyn_map._repr_html_(), height=600, scrolling=False)
+
     else:
-        st.warning("Map file not found. Place ghana_map.html in the data/ folder.")
-        map_data = (df[df['region_clean'] != 'Unknown']
-                    .groupby('region_clean')['name']
-                    .count().reset_index()
-                    .rename(columns={'name': 'Facilities', 'region_clean': 'Region'})
-                    .sort_values('Facilities'))
-        st.dataframe(map_data, use_container_width=True, hide_index=True)
+        # Fallback to static pre-generated map
+        _map_path = next(
+            (p for p in ["data/ghana_map.html", "ghana_map.html"] if os.path.exists(p)),
+            None
+        )
+        if _map_path:
+            with open(_map_path, 'r', encoding='utf-8') as _f:
+                st.components.v1.html(_f.read(), height=600, scrolling=False)
+        else:
+            st.warning("Install folium (`pip install folium`) to enable the interactive map.")
+            _map_data = (df[df['region_clean'] != 'Unknown']
+                         .groupby('region_clean')['name'].count().reset_index()
+                         .rename(columns={'name': 'Facilities', 'region_clean': 'Region'})
+                         .sort_values('Facilities'))
+            st.dataframe(_map_data, use_container_width=True, hide_index=True)
 
 # ════════════════════════════════════════════════════════════════
 # TAB 5 — DIRECTORY
