@@ -895,19 +895,19 @@ st.set_page_config(
 is_dark = st.session_state.get("dark_mode", True)
 
 if is_dark:
-    c_bg = "#0B1121"
-    c_bg_alt = "#111827"
-    c_sidebar = "linear-gradient(180deg, #040914 0%, #0A1628 100%)"
+    c_bg = "#050B14"
+    c_bg_alt = "#0A1428"
+    c_sidebar = "linear-gradient(180deg, #03070C 0%, #050B14 100%)"
     c_side_text = "#E2E8F0"
     c_side_head = "#FFFFFF"
-    c_card_bg = "rgba(15, 23, 42, 0.75)"
-    c_card_border = "rgba(255, 255, 255, 0.15)"
-    c_card_hover = "rgba(30, 41, 59, 0.85)"
-    c_text_main = "#F8FAFC"
+    c_card_bg = "rgba(15, 25, 45, 0.65)"
+    c_card_border = "rgba(100, 200, 255, 0.15)"
+    c_card_hover = "rgba(30, 45, 75, 0.85)"
+    c_text_main = "#F0F6FF"
     c_text_bold = "#FFFFFF"
-    c_text_muted = "#CBD5E1"
-    c_glass = "backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);"
-    c_header_bg = "linear-gradient(135deg, rgba(10,22,40,0.9) 0%, rgba(13,59,110,0.95) 100%)"
+    c_text_muted = "#A0ABC0"
+    c_glass = "backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);"
+    c_header_bg = "linear-gradient(135deg, rgba(15,23,42,0.85) 0%, rgba(30,27,75,0.9) 100%)"
 else:
     c_bg = "#F4F6F9"
     c_bg_alt = "#E2E8F0"
@@ -935,8 +935,11 @@ st.markdown(f"""
 
     .stApp {{ 
         font-family: 'Inter', sans-serif; 
-        background: linear-gradient(120deg, {c_bg}, {c_bg_alt}, {c_bg});
-        background-size: 200% 200%;
+        background: 
+            radial-gradient(circle at 15% 50%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+            linear-gradient(120deg, {c_bg}, {c_bg_alt}, {c_bg});
+        background-size: 100% 100%, 100% 100%, 200% 200%;
         animation: gradientShift 15s ease infinite;
         color: {c_text_main};
         transition: background 0.4s ease;
@@ -958,36 +961,52 @@ st.markdown(f"""
 
     .app-header {{
         background: {c_header_bg};
-        border-radius: 16px; padding: 2rem 2.5rem;
-        margin-bottom: 1.5rem; position: relative; overflow: hidden;
-        {c_glass} border: 1px solid {c_card_border};
+        border-radius: 20px; padding: 2.5rem 3rem;
+        margin-bottom: 2rem; position: relative; overflow: hidden;
+        {c_glass} 
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
     }}
     .app-header::before {{
-        content: ''; position: absolute; top: -50%; right: -10%;
+        content: ''; position: absolute; top: -50%; left: -10%;
+        width: 300px; height: 300px;
+        background: radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, transparent 70%);
+        border-radius: 50%; opacity: 0.6; filter: blur(40px);
+    }}
+    .app-header::after {{
+        content: ''; position: absolute; bottom: -50%; right: -10%;
         width: 400px; height: 400px;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        border-radius: 50%;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, transparent 70%);
+        border-radius: 50%; opacity: 0.6; filter: blur(40px);
     }}
     .app-header h1 {{
-        font-size: 2.2rem; font-weight: 600; color: #FFFFFF !important; margin: 0; letter-spacing: -0.02em;
+        font-size: 2.8rem; font-weight: 700; color: #FFFFFF !important; margin: 0; letter-spacing: -0.03em;
+        background: linear-gradient(to right, #FFFFFF, #E2E8F0);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        position: relative; z-index: 2;
     }}
-    .app-header p {{ font-size: 0.95rem; color: rgba(255,255,255,0.85); margin: 0.4rem 0 0 0; }}
+    .app-header p {{ 
+        font-size: 1.05rem; color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0; 
+        position: relative; z-index: 2; font-weight: 300;
+    }}
     .app-header .eval-badge {{
+        position: relative; z-index: 2;
         display: inline-block;
         background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.5);
         border-radius: 999px; padding: 0.25rem 0.75rem;
-        font-size: 0.75rem; font-weight: 600; color: #10B981; margin-top: 0.75rem;
+        font-size: 0.75rem; font-weight: 600; color: #10B981; margin-top: 1rem;
     }}
 
     .metric-card {{
         background: {c_card_bg}; border: 1px solid {c_card_border}; border-radius: 14px;
-        padding: 1.25rem 1.5rem; transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+        padding: 1.25rem 1.5rem; transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
         {c_glass}
     }}
     .metric-card:hover {{ 
         transform: translateY(-4px) scale(1.02); 
-        box-shadow: 0 12px 30px rgba(0,0,0,0.15); 
+        box-shadow: 0 12px 30px rgba(0,0,0,0.3), 0 0 20px rgba(6,182,212,0.15); 
         background: {c_card_hover};
+        border-color: rgba(6,182,212,0.4);
     }}
     .metric-card .label {{ font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: {c_text_muted}; margin-bottom: 0.4rem; }}
     .metric-card .value {{ font-size: 2.2rem; font-weight: 600; line-height: 1.1; }}
@@ -1033,15 +1052,21 @@ st.markdown(f"""
         font-size: 0.9rem; line-height: 1.7; color: {c_text_main};
         {c_glass}
     }}
+    .ai-answer p, .ai-answer li, .ai-answer strong, .ai-answer b,
+    .count-answer p, .count-answer li, .count-answer strong, .count-answer b,
+    .anomaly-answer p, .anomaly-answer li, .anomaly-answer strong, .anomaly-answer b {{
+        color: {c_text_main} !important;
+    }}
     .ai-answer .answer-label, .count-answer .answer-label, .anomaly-answer .answer-label {{
         font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-        letter-spacing: 0.08em; color: #06B6D4; margin-bottom: 0.6rem;
+        letter-spacing: 0.08em; color: #06B6D4 !important; margin-bottom: 0.6rem;
     }}
 
     .search-context {{
-        background: rgba(8, 145, 178, 0.1); border: 1px solid rgba(8, 145, 178, 0.2);
+        background: rgba(8, 145, 178, 0.15); border: 1px solid rgba(8, 145, 178, 0.3);
         border-radius: 8px; padding: 0.6rem 1rem;
         margin-bottom: 1rem; font-size: 0.85rem; color: #06B6D4;
+        box-shadow: 0 4px 15px rgba(8, 145, 178, 0.1);
     }}
 
     .section-header {{
@@ -1089,13 +1114,29 @@ st.markdown(f"""
     .stTabs [aria-selected="true"] {{ color: #06B6D4 !important; border-bottom-color: #06B6D4 !important; background: transparent !important; font-weight: 600 !important; }}
 
     div[data-testid="stTextInput"] input {{
-        background: {c_card_bg}; color: {c_text_main};
+        background: {c_card_bg} !important; color: {c_text_main} !important;
         border-radius: 10px; border: 2px solid {c_card_border};
         font-size: 0.95rem; padding: 0.75rem 1rem;
         font-family: 'Inter', sans-serif; transition: all 0.3s ease;
         {c_glass}
     }}
     div[data-testid="stTextInput"] input:focus {{ border-color: #06B6D4; box-shadow: 0 0 0 3px rgba(6,182,212,0.15); }}
+    
+    div[data-testid="stButton"] button {{
+        background-color: {c_card_bg} !important;
+        border: 1px solid {c_card_border} !important;
+        color: {c_text_main} !important;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }}
+    div[data-testid="stButton"] button:hover {{
+        background-color: {c_card_hover} !important;
+        border-color: #06B6D4 !important;
+        color: #06B6D4 !important;
+    }}
+    div[data-testid="stButton"] button p {{
+        color: inherit !important;
+    }}
     
     /* Emergency Contact Button Styling */
     .emergency-fab {{
@@ -1181,7 +1222,6 @@ if not groq_key:
 # ── SIDEBAR ───────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚕️ Ghana Healthcare")
-    st.toggle("🌙 Dark Mode", value=True, key="dark_mode")
     st.markdown("---")
 
     has_enriched = ('enriched_capability' in df.columns and
@@ -1230,13 +1270,19 @@ if selected_type   != "All": filtered_df = filtered_df[filtered_df['facilityType
 
 # ── HEADER ───────────────────────────────────────────────────
 critical_count = len(gap_df[gap_df['risk_level'] == 'Critical'])
-st.markdown(f"""
-<div class="app-header">
-  <h1>⚕️ Ghana Healthcare Coverage</h1>
-  <p>Identify medical deserts · Plan clinical interventions · Monitor regional healthcare resources</p>
-  <span class="eval-badge">✅ Intelligence System Active · {precomputed_stats['total']} facilities indexed</span>
-</div>
-""", unsafe_allow_html=True)
+
+hcol1, hcol2 = st.columns([8, 2])
+with hcol1:
+    st.markdown(f"""
+    <div class="app-header">
+      <h1>⚕️ Ghana Healthcare Coverage</h1>
+      <p>Identify medical deserts · Plan clinical interventions · Monitor regional healthcare resources</p>
+      <span class="eval-badge">✅ Intelligence System Active · {precomputed_stats['total']} facilities indexed</span>
+    </div>
+    """, unsafe_allow_html=True)
+with hcol2:
+    st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+    st.toggle("🌙 Dark Mode", value=True, key="dark_mode")
 
 # ── TABS ─────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
