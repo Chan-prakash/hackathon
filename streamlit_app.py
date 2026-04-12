@@ -1308,7 +1308,12 @@ with tab1:
                         f'<div class="value">{val}</div><div class="sub">{sub}</div></div>',
                         unsafe_allow_html=True)
 
-    import plotly.graph_objects as go
+    try:
+        import plotly.graph_objects as go
+        HAS_PLOTLY = True
+    except ImportError:
+        HAS_PLOTLY = False
+
     st.markdown("")
     cc1, cc2 = st.columns([3, 2])
 
@@ -1318,43 +1323,53 @@ with tab1:
               .groupby('region_clean')['name'].count().reset_index())
         rc.columns = ['Region', 'Count']
         rc = rc.sort_values('Count', ascending=True)
-        risk_map = dict(zip(gap_df['region_clean'], gap_df['risk_level']))
-        rc['Color'] = rc['Region'].map(risk_map).map({
-            'Critical': '#DC2626', 'High Risk': '#D97706',
-            'Moderate': '#CA8A04', 'Adequate': '#059669'
-        }).fillna('#94A3B8')
-        fig = go.Figure(go.Bar(
-            x=rc['Count'], y=rc['Region'], orientation='h',
-            marker_color=rc['Color'], text=rc['Count'], textposition='outside',
-            hovertemplate='<b>%{y}</b><br>Facilities: %{x}<extra></extra>'
-        ))
-        fig.update_layout(
-            height=max(380, len(rc)*26), margin=dict(l=0, r=50, t=10, b=10),
-            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-            xaxis=dict(showgrid=True, gridcolor='#F1F5F9', zeroline=False),
-            yaxis=dict(showgrid=False),
-            font=dict(family='Inter', size=12, color='#334155'),
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        
+        if HAS_PLOTLY:
+            risk_map = dict(zip(gap_df['region_clean'], gap_df['risk_level']))
+            rc['Color'] = rc['Region'].map(risk_map).map({
+                'Critical': '#DC2626', 'High Risk': '#D97706',
+                'Moderate': '#CA8A04', 'Adequate': '#059669'
+            }).fillna('#94A3B8')
+            fig = go.Figure(go.Bar(
+                x=rc['Count'], y=rc['Region'], orientation='h',
+                marker_color=rc['Color'], text=rc['Count'], textposition='outside',
+                hovertemplate='<b>%{y}</b><br>Facilities: %{x}<extra></extra>'
+            ))
+            fig.update_layout(
+                height=max(380, len(rc)*26), margin=dict(l=0, r=50, t=10, b=10),
+                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(showgrid=True, gridcolor='#F1F5F9', zeroline=False),
+                yaxis=dict(showgrid=False),
+                font=dict(family='Inter', size=12, color='#334155'),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            # Fallback to pure Streamlit bar chart
+            st.bar_chart(rc.set_index('Region')['Count'], use_container_width=True)
 
     with cc2:
         st.markdown('<div class="section-header">Risk Distribution</div>', unsafe_allow_html=True)
         rv = gap_df['risk_level'].value_counts().reset_index()
         rv.columns = ['Risk Level', 'Count']
-        color_map = {'Critical': '#DC2626', 'High Risk': '#D97706', 'Moderate': '#CA8A04', 'Adequate': '#059669'}
-        fig2 = go.Figure(go.Pie(
-            labels=rv['Risk Level'], values=rv['Count'], hole=0.6,
-            marker_colors=[color_map.get(r, '#94A3B8') for r in rv['Risk Level']],
-            textinfo='label+percent',
-        ))
-        fig2.update_layout(
-            height=380, margin=dict(l=10, r=10, t=10, b=10),
-            paper_bgcolor='rgba(0,0,0,0)', showlegend=False,
-            font=dict(family='Inter', size=12),
-            annotations=[dict(text=f'<b>{len(gap_df)}</b><br>Regions',
-                             x=0.5, y=0.5, font_size=14, font_color='#0F172A', showarrow=False)]
-        )
-        st.plotly_chart(fig2, use_container_width=True)
+        
+        if HAS_PLOTLY:
+            color_map = {'Critical': '#DC2626', 'High Risk': '#D97706', 'Moderate': '#CA8A04', 'Adequate': '#059669'}
+            fig2 = go.Figure(go.Pie(
+                labels=rv['Risk Level'], values=rv['Count'], hole=0.6,
+                marker_colors=[color_map.get(r, '#94A3B8') for r in rv['Risk Level']],
+                textinfo='label+percent',
+            ))
+            fig2.update_layout(
+                height=380, margin=dict(l=10, r=10, t=10, b=10),
+                paper_bgcolor='rgba(0,0,0,0)', showlegend=False,
+                font=dict(family='Inter', size=12),
+                annotations=[dict(text=f'<b>{len(gap_df)}</b><br>Regions',
+                                 x=0.5, y=0.5, font_size=14, font_color='#0F172A', showarrow=False)]
+            )
+            st.plotly_chart(fig2, use_container_width=True)
+        else:
+            # Fallback for pie chart
+            st.dataframe(rv, use_container_width=True, hide_index=True)
 
         st.markdown('<div class="section-header">Service Coverage</div>', unsafe_allow_html=True)
         for svc in services_dict:
