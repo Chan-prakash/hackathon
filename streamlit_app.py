@@ -753,8 +753,11 @@ def detect_anomalies(result):
 def get_llm_answer(question, results, groq_key, df, region, service, stats):
     if not groq_key:
         return "Set GROQ_KEY in Streamlit Secrets to enable AI analysis."
-    from groq import Groq
-    gclient = Groq(api_key=groq_key)
+    try:
+        from groq import Groq
+        gclient = Groq(api_key=groq_key)
+    except ImportError:
+        return "⚠️ AI features are currently unavailable (dependency missing on cloud)."
     by_type = stats['by_type']
     stats_summary = (
         f"Total facilities: {stats['total']} "
