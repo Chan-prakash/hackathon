@@ -855,32 +855,41 @@ def load_search_index(_df_len, _df_cols):
         return " | ".join(parts)
 
     texts = df.apply(build_rich_text, axis=1).tolist()
-    from rank_bm25 import BM25Okapi
-    bm25 = BM25Okapi([t.lower().split() for t in texts])
 
-    import faiss as faiss_lib
-    from sentence_transformers import SentenceTransformer
-    embedder = SentenceTransformer('all-MiniLM-L6-v2')
+    try:
+        from rank_bm25 import BM25Okapi
+        bm25 = BM25Okapi([t.lower().split() for t in texts])
+    except ImportError:
+        bm25 = None
 
-    faiss_path = next((p for p in ["data/faiss_index.bin", "faiss_index.bin",
-                                   "data/hospital_index.faiss", "hospital_index.faiss"] if os.path.exists(p)), None)
-    emb_path   = next((p for p in ["data/embeddings.npy", "embeddings.npy",
-                                   "data/hospital_embeddings.npy", "hospital_embeddings.npy"] if os.path.exists(p)), None)
+    try:
+        import faiss as faiss_lib
+        from sentence_transformers import SentenceTransformer
+        embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
-    if faiss_path and emb_path:
-        try:
-            faiss_index = faiss_lib.read_index(faiss_path)
-            embeddings  = np.load(emb_path)
-            if faiss_index.ntotal != len(df):
-                raise ValueError(f"Index mismatch: {faiss_index.ntotal} vs {len(df)}")
-        except Exception:
+        faiss_path = next((p for p in ["data/faiss_index.bin", "faiss_index.bin",
+                                       "data/hospital_index.faiss", "hospital_index.faiss"] if os.path.exists(p)), None)
+        emb_path   = next((p for p in ["data/embeddings.npy", "embeddings.npy",
+                                       "data/hospital_embeddings.npy", "hospital_embeddings.npy"] if os.path.exists(p)), None)
+
+        if faiss_path and emb_path:
+            try:
+                faiss_index = faiss_lib.read_index(faiss_path)
+                embeddings  = np.load(emb_path)
+                if faiss_index.ntotal != len(df):
+                    raise ValueError(f"Index mismatch: {faiss_index.ntotal} vs {len(df)}")
+            except Exception:
+                embeddings  = embedder.encode(texts, show_progress_bar=False, batch_size=64).astype('float32')
+                faiss_index = faiss_lib.IndexFlatL2(embeddings.shape[1])
+                faiss_index.add(embeddings)
+        else:
             embeddings  = embedder.encode(texts, show_progress_bar=False, batch_size=64).astype('float32')
             faiss_index = faiss_lib.IndexFlatL2(embeddings.shape[1])
             faiss_index.add(embeddings)
-    else:
-        embeddings  = embedder.encode(texts, show_progress_bar=False, batch_size=64).astype('float32')
-        faiss_index = faiss_lib.IndexFlatL2(embeddings.shape[1])
-        faiss_index.add(embeddings)
+    except ImportError:
+        faiss_index = None
+        embeddings = None
+        embedder = None
 
     return bm25, faiss_index, embeddings, embedder, texts
 
