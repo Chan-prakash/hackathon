@@ -6,14 +6,17 @@ import json
 import ast
 import math
 import re
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 try:
     import folium
     HAS_FOLIUM = True
 except ImportError:
     HAS_FOLIUM = False
-
-load_dotenv()
 
 # ════════════════════════════════════════════════════════════════
 # TEXT HELPERS
