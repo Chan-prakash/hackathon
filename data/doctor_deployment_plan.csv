@@ -1,0 +1,6 @@
+desert_region,facilities,services,missing_services,source_region,distance_km,priority
+Savannah,1,0,"ICU specialist, Surgeon, Emergency doctor, Obstetrician, Pediatrician",Volta,177.4,🔴 URGENT
+Ahafo,3,1,"ICU specialist, Surgeon, Emergency doctor, Pediatrician",Ashanti,110.9,🔴 URGENT
+Oti,3,1,"ICU specialist, Emergency doctor, Obstetrician, Pediatrician",Volta,74.7,🔴 URGENT
+Upper East,3,2,"ICU specialist, Surgeon, Emergency doctor, Obstetrician",Volta,317.9,🟠 HIGH
+Bono East,3,5,"ICU specialist, Surgeon",Volta,61.7,🟠 HIGH

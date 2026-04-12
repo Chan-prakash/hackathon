@@ -1,0 +1,26 @@
+patient_region,condition,nearest_hospital,distance_km,travel_mins,recommendation
+Upper East,cardiac arrest,Eastside Life Hospital,0.0,0,"**Emergency Routing Recommendation:**
+1. Go to **Eastside Life Hospital** first, as it's the closest (0.0 km) and has a high confidence level with necessary capabilities.
+2. Estimated travel time: ~0 min, **CRITICAL** urgency level.
+3. Prepare/bring: patient's medical history, emergency contact info, and any relevant medical documents.
+4. Warning: Data confidence is high, but cardiac arrest requires immediate attention; proceed with urgency."
+Northern,complicated pregnancy,Ospedale Didattico di Tamale,0.0,0,"**Emergency Routing Recommendation:**
+1. Go to Aisha Hospital FIRST due to its High confidence level and comprehensive emergency care services.
+2. Estimated travel time: ~0 min drive, Urgency level: CRITICAL.
+3. Prepare/bring: Patient's medical history, contact information, and any relevant documents.
+4. Warning: Data confidence for Ospedale Didattico di Tamale is Medium, which may impact the accuracy of its capabilities. Aisha Hospital's High confidence level makes it a more reliable choice."
+Upper West,severe trauma,Allen Health Clinic - Ghana,0.0,0,"**Emergency Routing Recommendation:**
+1. Go to **Hospital 1: Allen Health Clinic** first, as it's the closest (0.0 km) and can provide initial trauma care.
+2. **Estimated travel time: 0 min, Urgency level: CRITICAL**.
+3. Prepare to bring patient's medical history and any relevant documents.
+4. **Warning: Medium confidence** in Hospital 1's capabilities, consider transferring to Hospital 3: Aisha Hospital (210 min drive) if necessary, due to its higher confidence and advanced care capabilities."
+Volta,stroke,Catholic Hospital Battor,0.0,0,"**Emergency Routing Recommendation:**
+1. Go to Akatsi South Municipal Hospital FIRST due to its High confidence level and 24/7 availability.
+2. Estimated travel time: 0 km (~0 min drive), Urgency level: CRITICAL (stroke requires immediate attention).
+3. Prepare/bring: Patient's medical history, contact information, and any relevant documents.
+4. Warning: Data confidence for Hospital 1 and 2 is Medium, which may impact the accuracy of their capabilities. Akatsi South Municipal Hospital's High confidence level makes it the most reliable option."
+Greater Accra,pediatric emergency,Dr. Martin Curry Dentistry,0.0,0,"**Emergency Routing Recommendation:**
+1. Go to African Vision Clinic - Adenta Housing down, Accra, Ghana **FIRST** due to its high confidence level and availability of medical services.
+2. Estimated travel time: ~0 min drive. Urgency level: **CRITICAL** (pediatric emergency).
+3. Prepare/bring: patient's medical history, emergency contact information, and any relevant medical documents.
+4. Warning: Data confidence for Hospital 1 (Dr. Martin Curry Dentistry) is medium and it's currently closed, so it's not a viable option. Rely on African Vision Clinic for immediate medical attention."
