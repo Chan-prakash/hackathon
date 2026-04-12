@@ -249,7 +249,7 @@ print(f"\n✅ Anomalies saved to: facility_anomalies")
 # COMMAND ----------
 
 # Install folium for map
-%pip install folium -q
+# MAGIC %pip install folium -q
 
 # COMMAND ----------
 
@@ -375,33 +375,86 @@ ghana_map
 
 import mlflow
 
-mlflow.set_experiment("/Users/cp4707@srmist.edu.in/medical-desert-idp-agent")
+# Force local tracking — works on Community Edition
+mlflow.set_tracking_uri("databricks")
+
+# Disable registry completely
+import os
+os.environ["MLFLOW_TRACKING_URI"] = "databricks"
+
+try:
+    # Create experiment manually first
+    experiment_name = "medical-desert-idp-agent"
+    
+    try:
+        experiment_id = mlflow.create_experiment(experiment_name)
+    except Exception:
+        experiment_id = mlflow.get_experiment_by_name(
+            experiment_name
+        ).experiment_id
+    
+    with mlflow.start_run(
+        experiment_id=experiment_id,
+        run_name="Ghana_IDP_Extraction"
+    ):
+        # Metrics
+        mlflow.log_metric("total_facilities", 987)
+        mlflow.log_metric("facilities_extracted", 440)
+        mlflow.log_metric("known_regions", 949)
+        mlflow.log_metric("unknown_regions", 38)
+        mlflow.log_metric("critical_deserts",
+            int((region_scores['risk_level'] == 
+                 '🔴 CRITICAL DESERT').sum()))
+        mlflow.log_metric("high_risk",
+            int((region_scores['risk_level'] == 
+                 '🟠 HIGH RISK').sum()))
+        mlflow.log_metric("anomalies_detected", len(anomaly_df))
+        
+        # Parameters
+        mlflow.log_param("ai_model", "llama-3.3-70b-versatile")
+        mlflow.log_param("ai_provider", "Groq")
+        mlflow.log_param("prompt_version", "v2")
+        mlflow.log_param("country", "Ghana")
+        mlflow.log_param("embedding_model", "all-MiniLM-L6-v2")
+        mlflow.log_param("vector_store", "FAISS")
+        mlflow.log_param("orchestration", "LangGraph")
+        
+        # Log map as artifact
+        mlflow.log_artifact("/tmp/ghana_map.html")
+        
+        print("✅ MLflow experiment tracked successfully!")
+        print(f"   Experiment ID : {experiment_id}")
+        print(f"   Run name      : Ghana_IDP_Extraction")
+        print(f"\n📊 Metrics logged:")
+        print(f"   Total facilities    : 987")
+        print(f"   Extracted           : 440")
+        print(f"   Critical deserts    : "
+              f"{int((region_scores['risk_level']=='🔴 CRITICAL DESERT').sum())}")
+        print(f"   Anomalies detected  : {len(anomaly_df)}")
+
+except Exception as e:
+    print(f"⚠️ MLflow error: {str(e)[:100]}")
+    print("   Skipping MLflow — not critical for submission")
+
+print("\n🎉 Notebook 3 FULLY COMPLETE!")
+
+# COMMAND ----------
+
+import mlflow
+
+# Use local file storage instead of Databricks registry
+mlflow.set_tracking_uri("file:///tmp/mlruns")
+mlflow.set_experiment("medical-desert-idp-agent")
 
 with mlflow.start_run(run_name="Ghana_IDP_Extraction"):
-    
-    # Metrics
     mlflow.log_metric("total_facilities", 987)
-    mlflow.log_metric("facilities_extracted", 440)
-    mlflow.log_metric("procedure_filled", 848)
-    mlflow.log_metric("equipment_filled", 765)
-    mlflow.log_metric("capability_filled", 976)
-    mlflow.log_metric("regions_mapped", 955)
-    mlflow.log_metric("critical_deserts", 26)
-    mlflow.log_metric("anomalies_detected", 103)
-    
-    # Parameters
+    mlflow.log_metric("critical_deserts",
+        int((region_scores['risk_level'] == 
+             '🔴 CRITICAL DESERT').sum()))
+    mlflow.log_metric("anomalies_detected", len(anomaly_df))
     mlflow.log_param("ai_model", "llama-3.3-70b-versatile")
-    mlflow.log_param("ai_provider", "Groq")
-    mlflow.log_param("prompt_version", "v2")
-    mlflow.log_param("country", "Ghana")
-    mlflow.log_param("total_anomaly_types", 5)
-    
-    # Save map as artifact
+    mlflow.log_param("vector_store", "FAISS")
+    mlflow.log_param("orchestration", "LangGraph")
     mlflow.log_artifact("/tmp/ghana_map.html")
-    
-    print("✅ MLflow experiment tracked!")
-    print("\n📊 WHAT WAS LOGGED:")
-    print("   Metrics  → extraction rates, desert counts")
-    print("   Params   → model used, prompt version")
-    print("   Artifact → Ghana medical desert map")
-    print("\n👉 View in: Experiments → medical-desert-idp-agent")
+    print("✅ MLflow tracked!")
+    print(f"   Run ID: {mlflow.active_run().info.run_id}")

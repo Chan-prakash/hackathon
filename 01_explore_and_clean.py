@@ -1,17 +1,9 @@
 # Databricks notebook source
-# Upload CSV directly via Databricks file upload widget
-# First let's check if the file is already accessible
-
 import pandas as pd
 
-# Try loading - we'll fix the path if needed
-try:
-    df = pd.read_csv("/Volumes/workspace/default/project/Virtue Foundation Ghana v0.3 - Sheet1.csv")
-    print(f"✅ File found! Total facilities: {len(df)}")
-    print(f"📋 Columns: {list(df.columns[:5])}...")
-except Exception as e:
-    print(f"❌ File not found yet. Error: {e}")
-    print("👉 We need to upload the CSV first - see instructions below")
+df = pd.read_csv("/Volumes/workspace/default/project/Virtue Foundation Ghana v0.3 - Sheet1.csv")
+print(f"✅ File found! Total facilities: {len(df)}")
+print(f"📋 Columns: {list(df.columns[:5])}...")
 
 # COMMAND ----------
 
@@ -227,7 +219,7 @@ try:
                   capture_output=True)
     from groq import Groq
     
-    GROQ_KEY = "paste-groq-key-here"
+    GROQ_KEY = ""
     
     if GROQ_KEY != "paste-groq-key-here":
         client = Groq(api_key=GROQ_KEY)
@@ -277,3 +269,19 @@ for model in models_to_try:
         break
     except Exception as e:
         print(f"❌ {model} → {str(e)[:80]}")
+
+# COMMAND ----------
+
+# MAGIC %pip install groq sentence-transformers faiss-cpu langgraph langchain langchain-groq folium mlflow -q
+
+# COMMAND ----------
+
+from groq import Groq
+
+client = Groq(api_key=os.environ.get("GROQ_KEY"))
+response = client.chat.completions.create(
+    model="llama-3.3-70b-versatile",
+    messages=[{"role": "user", "content": "Say: GROQ WORKS"}],
+    max_tokens=10
+)
+print(f"✅ {response.choices[0].message.content}")

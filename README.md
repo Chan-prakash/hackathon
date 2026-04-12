@@ -10,6 +10,13 @@
 
 ---
 
+## 🌟 Live Demo & Workflow Video
+
+- **Workflow / Demo Video:** [Watch the Video (working.mp4)](https://drive.google.com/file/d/1_p0fQsiERITjyMZidQwb1knKzIeR97Kw/view?usp=sharing)
+- **Live Streamlit App:** [Insert Streamlit Cloud URL Here](https://share.streamlit.io/)
+
+---
+
 ## 🌍 The Problem: Ghana's Medical Deserts
 
 A **medical desert** is a region where people lack adequate access to basic healthcare — no emergency care, no surgery, no ICU, no maternity services. In Ghana, this is a daily reality for millions:
@@ -30,11 +37,12 @@ This project answers all of those questions — instantly, accurately, and from 
 The **Ghana Medical Desert Agent** is a full-stack AI application that:
 
 1. **Indexes 896 real Ghana healthcare facilities** from the Virtue Foundation dataset
-2. **Extracts structured capabilities** (procedures, equipment, specialties) from raw descriptions using an LLM-powered IDP (Intelligent Document Processing) pipeline
-3. **Runs hybrid semantic + keyword search** (BM25 + FAISS) to find the most relevant facilities for any natural language query
-4. **Routes questions intelligently** — counting questions bypass the vector store entirely and query all 896 rows for accuracy
-5. **Generates AI-powered answers** using Groq's LLaMA 3.3 70B model with full dataset statistics as context
-6. **Visualises gaps on an interactive map** with risk-coded regional overlays
+2. **Extracts structured capabilities** (procedures, equipment, specialties) from raw descriptions using a **Pydantic-validated** LLM-powered IDP pipeline, complete with source citations.
+3. **Runs hybrid semantic + keyword search** (BM25 + FAISS + Cross-Encoder reranking) to find the most relevant facilities for any natural language query.
+4. **Routes questions intelligently** — counting questions bypass the vector store entirely and query all 896 rows for accuracy.
+5. **Generates AI-powered answers** using Groq's LLaMA 3.3 70B model with full dataset statistics as context.
+6. **Visualises gaps on an interactive map** with risk-coded regional overlays.
+7. **Emergency Patient Routing & Doctor Deployment** — computes Haversine distances to route patients to the nearest capable hospital, and identifies surplus regions to send doctors to critical deserts.
 
 ---
 
@@ -147,6 +155,36 @@ The data powering this app was built through a 5-stage pipeline on Databricks:
 - Extended city-to-region mapping fixing 100+ `Unknown` region assignments
 - Performance report: extraction rates, region coverage, anomaly counts
 - Final data export to `hospital_metadata.csv` for the Streamlit app
+
+### `06_emergency_routing_FINAL.py` — Patient Routing & Doctor Deployment
+- Computes Haversine distances between patient regions and hospitals
+- Matches medical conditions to required capabilities (e.g., "severe trauma" → surgery, ICU)
+- Recommends nearest capable hospitals with travel times
+- **Doctor Deployment Optimizer**: Recommends moving doctors from secure/surplus regions to adjacent critical deserts
+
+### `07_fixes_and_evaluation.py` & `08_region_fixes_and_citations.py` — Reranking & Citations
+- Extracts JSON arrays back to flat search texts for improved FAISS retrieval
+- Maps hard-to-find cities cleanly to their region, solving 100+ "Unknown" regions
+- Adds a **Cross-Encoder reranker** (`ms-marco-MiniLM-L-6-v2`) to re-rank vector search results
+- Mines descriptions to derive exact sentence-level **citations** for every extracted fact
+
+### `09_pydantic_evaluation_and_extraction.py` — Pydantic Schema Validation
+- Formally validates all extracted capabilities against the Virtue Foundation `FacilityFacts` schema using Pydantic
+- Validates that `specialties` map strictly to the allowed ontology (e.g. `pediatrics`, `generalSurgery`)
+
+### `10_rag_evaluation_mlflow.py` — RAG 10-Question Evaluation & MLflow
+- Evaluates the RAG system using a benchmark dataset of 10 complex NGO questions
+- Scores results deterministically and via LLM-as-a-judge (Groq) on 4 metrics: Correctness, Retrieval Quality, Coverage, and Failure Analysis
+- Logs all artifacts, scores, and run configurations strictly to **MLflow** for visibility and tracking
+
+### 👨‍⚖️ For Judges: Reproducing Databricks Pipeline
+We ran the expensive AI extractions offline to provide a fast user experience. However, to evaluate or reproduce the backend pipeline:
+1. Setup a Databricks Cluster (Databricks Runtime 13.3 LTS ML or higher recommended).
+2. Install dependencies: `%pip install -U groq folium pydantic rank_bm25 sentence-transformers faiss-cpu`
+3. Set your Groq API Key in Databricks secrets or standard environment variable `GROQ_KEY`.
+4. Upload all python scripts starting with `01_` to `10_` into your workspace.
+5. Run them sequentially (01 → 10). The intermediate steps use Delta Lake for storage.
+6. The final output generates the `hospital_metadata.csv` file we bundled in this repository.
 
 ---
 
@@ -281,6 +319,18 @@ streamlit run streamlit_app.py
 ```
 
 Open `http://localhost:8501` — the app initialises the search engine on first run (~30 seconds), then all queries are instant.
+
+### 4. Deploying to Streamlit Cloud
+
+To push this application to Streamlit Community Cloud:
+1. Fork or push this repository to your GitHub account.
+2. Sign in to [Streamlit Share](https://share.streamlit.io/) and click **New App**.
+3. Select your repository, branch (`main`), and main file path (`streamlit_app.py`).
+4. Click **Advanced settings...** and add your Groq secret:
+   ```toml
+   GROQ_KEY = "gsk_your_actual_key_here"
+   ```
+5. Click **Deploy!** The platform will automatically install dependencies from `requirements.txt` and launch the app.
 
 ---
 

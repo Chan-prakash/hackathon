@@ -1,21 +1,22 @@
 # Databricks notebook source
-# MAGIC %pip install langgraph langchain langchain-groq faiss-cpu sentence-transformers -q
+# Cell 1 — Install with correct versions
+# MAGIC %pip install --upgrade typing_extensions groq langgraph langchain langchain-groq faiss-cpu sentence-transformers -q
 
 # COMMAND ----------
 
-# Cell 2 — Imports and Setup
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
 import os
 import json
 import time
 import pandas as pd
-from typing import TypedDict, List, Annotated
-import operator
-
+from typing import TypedDict, List
 from groq import Groq
 from langgraph.graph import StateGraph, END
 
-# Your Groq key
-GROQ_KEY = os.environ.get("GROQ_KEY", "")
+GROQ_KEY = os.environ.get("GROQ_KEY")  # Set in Databricks cluster env vars
 client = Groq(api_key=GROQ_KEY)
 
 print("✅ Imports done!")
@@ -433,11 +434,7 @@ print("✅ Pipeline tested on real hospitals!")
 # Cell 10 — Build FAISS Vector Store
 # This converts all hospital descriptions into searchable embeddings
 
-# NOTE: The original Databricks magic command was: %pip install sentence-transformers faiss-cpu -q
-# In a standard Python environment, install these via your terminal:
-#   pip install sentence-transformers faiss-cpu
-import subprocess, sys
-subprocess.check_call([sys.executable, "-m", "pip", "install", "sentence-transformers", "faiss-cpu", "-q"])
+# MAGIC %pip install sentence-transformers faiss-cpu -q
 
 # COMMAND ----------
 
@@ -491,72 +488,98 @@ print(f"   Each hospital = {embeddings.shape[1]} numbers")
 
 # COMMAND ----------
 
-# Cell 12 (UPDATED) — Embed ALL 987 hospitals
-# Use every available column, not just description
+# Cell 12 (FINAL) — Build HIGH-QUALITY searchable text for ALL hospitals
+
+MAX_LEN = 800  # Prevent overly long text (important for embeddings)
+
+def is_valid(val):
+    """Check if a field has meaningful content"""
+    return str(val) not in ['', 'nan', '[]', "['']", 'None']
 
 def build_hospital_text_full(row):
     """
-    Build searchable text for every hospital
-    even if description is missing
-    Uses ALL available columns
+    Build natural-language searchable text for every hospital
+    Optimized for semantic search (embedding-friendly)
     """
     parts = []
     
-    # Always available
-    parts.append(f"Hospital: {row['name']}")
-    parts.append(f"Region: {row['region_clean']}")
-    parts.append(f"Type: {row['facilityTypeId']}")
+    # Core identity (always present)
+    name = row.get('name', 'Unknown hospital')
+    city = row.get('address_city', 'unknown city')
+    region = row.get('region_clean', 'unknown region')
     
-    # Location
-    if str(row.get('address_city', '')) not in ['', 'nan']:
-        parts.append(f"City: {row['address_city']}")
+    parts.append(f"{name} is a healthcare facility located in {city}, {region}.")
     
-    # Description (if available)
-    if str(row.get('description', '')) not in ['', 'nan', '[]']:
-        parts.append(f"Description: {str(row['description'])[:500]}")
+    # Type
+    if is_valid(row.get('facilityTypeId')):
+        parts.append(f"It is a type {row['facilityTypeId']} hospital.")
     
-    # Specialties (very useful for search!)
-    if str(row.get('specialties', '')) not in ['', 'nan', '[]']:
-        parts.append(f"Specialties: {row['specialties']}")
+    # Description
+    if is_valid(row.get('description')):
+        parts.append(f"About the hospital: {str(row['description'])[:400]}.")
+    
+    # Specialties (VERY IMPORTANT for search)
+    if is_valid(row.get('specialties')):
+        parts.append(f"It offers specialties such as {row['specialties']}.")
+        parts.append(f"Key specialties include {row['specialties']}.")  # repetition boost
     
     # Procedures
-    if str(row.get('procedure', '')) not in ['', 'nan', '[]', "['']"]:
-        parts.append(f"Procedures: {row['procedure']}")
+    if is_valid(row.get('procedure')):
+        parts.append(f"Procedures available include {row['procedure']}.")
     
     # Equipment
-    if str(row.get('equipment', '')) not in ['', 'nan', '[]', "['']"]:
-        parts.append(f"Equipment: {row['equipment']}")
+    if is_valid(row.get('equipment')):
+        parts.append(f"The hospital is equipped with {row['equipment']}.")
     
     # Capabilities
-    if str(row.get('capability', '')) not in ['', 'nan', '[]', "['']"]:
-        parts.append(f"Capabilities: {row['capability']}")
+    if is_valid(row.get('capability')):
+        parts.append(f"It has capabilities such as {row['capability']}.")
     
-    # Extracted facts from IDP agent
-    if str(row.get('extracted_procedure', '')) not in ['', 'nan', '[]', "['']"]:
-        parts.append(f"Extracted Procedures: {row['extracted_procedure']}")
+    # Extracted insights (from IDP)
+    if is_valid(row.get('extracted_procedure')):
+        parts.append(f"Additional procedures include {row['extracted_procedure']}.")
     
-    if str(row.get('extracted_capability', '')) not in ['', 'nan', '[]', "['']"]:
-        parts.append(f"Extracted Capabilities: {row['extracted_capability']}")
+    if is_valid(row.get('extracted_capability')):
+        parts.append(f"Additional capabilities include {row['extracted_capability']}.")
     
-    return ' | '.join(parts)
+    # Query-friendly sentence (boosts retrieval performance)
+    if is_valid(row.get('specialties')):
+        parts.append(f"This hospital is suitable for patients looking for {row['specialties']} treatments.")
+    
+    # Join + truncate
+    full_text = " ".join(parts)
+    return full_text[:MAX_LEN]
 
-# Apply to ALL 987 hospitals
+
+# =========================
+# APPLY TO DATAFRAME
+# =========================
+
 print("🔄 Building search text for ALL hospitals...")
+
 df['search_text_full'] = df.apply(build_hospital_text_full, axis=1)
 
-# Check coverage
+# =========================
+# VALIDATION
+# =========================
+
 has_good_text = df['search_text_full'].str.len() > 30
 print(f"✅ Hospitals with searchable text: {has_good_text.sum()} / {len(df)}")
 
-# Check what text length looks like
 print(f"\n📊 Text length stats:")
 print(f"   Average length : {df['search_text_full'].str.len().mean():.0f} chars")
 print(f"   Min length     : {df['search_text_full'].str.len().min()} chars")
 print(f"   Max length     : {df['search_text_full'].str.len().max()} chars")
 
+# Sample check (no description case)
 print(f"\n📋 Sample for a hospital with no description:")
-no_desc = df[df['description'].isna()].iloc[0]
-print(f"   {no_desc['search_text_full']}")
+no_desc_df = df[df['description'].isna()]
+
+if len(no_desc_df) > 0:
+    sample = no_desc_df.iloc[0]
+    print(f"   {sample['search_text_full']}")
+else:
+    print("   No hospitals with missing description found.")
 
 # COMMAND ----------
 
@@ -1335,9 +1358,7 @@ else:
 # COMMAND ----------
 
 # Regenerate the map
-# NOTE: The original Databricks magic command was: %pip install folium -q
-import subprocess, sys
-subprocess.check_call([sys.executable, "-m", "pip", "install", "folium", "-q"])
+# MAGIC %pip install folium -q
 
 # COMMAND ----------
 
@@ -1552,35 +1573,58 @@ except Exception as e:
 
 # COMMAND ----------
 
-# Test the same questions directly in Databricks
-from groq import Groq
+# ==============================
+# SETUP (Run once)
+# ==============================
 
-client = Groq(api_key=os.environ.get("GROQ_KEY", ""))
+from groq import Groq
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
+
+client = Groq(api_key="YOUR_API_KEY")
 
 # Load data
 hospital_metadata_full = spark.table("hospital_metadata_full").toPandas()
 hospital_metadata_full = hospital_metadata_full.fillna("")
 
-def ask_question(question):
+# Load embedding model
+model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+# Build embeddings (only once)
+texts = hospital_metadata_full['search_text_full'].tolist()
+embeddings = model.encode(texts, show_progress_bar=True)
+
+# Convert to numpy
+embeddings = np.array(embeddings).astype("float32")
+
+# Build FAISS index
+dimension = embeddings.shape[1]
+index = faiss.IndexFlatL2(dimension)
+index.add(embeddings)
+
+print(f"✅ FAISS index built with {index.ntotal} hospitals")
+
+
+# ==============================
+# RAG FUNCTION
+# ==============================
+
+def ask_question_rag(question, k=20):
     print(f"\n{'='*60}")
     print(f"❓ QUESTION: {question}")
     print('='*60)
     
-    # Build context from matching hospitals
-    # Simple keyword filter first
-    keywords = question.lower().split()
-    mask = hospital_metadata_full.apply(
-        lambda row: any(
-            kw in str(row.get('region_clean','')).lower() or
-            kw in str(row.get('description','')).lower() or
-            kw in str(row.get('capability','')).lower() or
-            kw in str(row.get('name','')).lower()
-            for kw in keywords
-        ), axis=1
-    )
+    # Step 1: Convert question → embedding
+    query_embedding = model.encode([question]).astype("float32")
     
-    matches = hospital_metadata_full[mask].head(5)
+    # Step 2: FAISS search
+    distances, indices = index.search(query_embedding, k)
     
+    # Step 3: Get top results
+    matches = hospital_metadata_full.iloc[indices[0]]
+    
+    # Step 4: Build context
     context = ""
     for i, (_, row) in enumerate(matches.iterrows(), 1):
         context += f"""
@@ -1592,18 +1636,26 @@ Hospital {i}: {row.get('name', 'Unknown')}
 - Capability: {str(row.get('capability',''))[:150]}
 - Procedure: {str(row.get('procedure',''))[:150]}
 ---"""
-
+    
+    # Step 5: Prompt
     prompt = f"""You are an AI assistant helping NGO coordinators 
-at the Virtue Foundation in Ghana. Answer clearly based on the 
-hospital data. Flag anomalies if found.
+at the Virtue Foundation in Ghana.
+
+Use ONLY the hospital data below to answer.
 
 Hospital Data:
 {context}
 
 Question: {question}
 
-Give a structured answer with specific recommendations."""
-
+Give:
+1. Clear answer
+2. Key hospitals
+3. Recommendations
+4. Flag anomalies if any
+"""
+    
+    # Step 6: LLM call
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
@@ -1612,14 +1664,137 @@ Give a structured answer with specific recommendations."""
     )
     
     answer = response.choices[0].message.content
+    
+    # Step 7: Print result
     print(f"\n🤖 AI ANSWER:\n{answer}")
     print(f"\n📋 BASED ON {len(matches)} HOSPITALS:")
+    
     for _, row in matches.iterrows():
         print(f"   • {row.get('name')} — {row.get('region_clean')} — {row.get('facilityTypeId')}")
 
-# ── Test all 5 questions ──
-ask_question("Which hospitals are in Accra?")
-ask_question("Which hospitals have emergency care?")
-ask_question("Which regions lack ICU facilities?")
-ask_question("Find hospitals with surgery in Ashanti region")
-ask_question("Which areas are medical deserts in Ghana?")
+# COMMAND ----------
+
+# ==============================
+# SETUP
+# ==============================
+from groq import Groq
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
+
+# 🔐 API Key
+client = Groq(api_key=os.environ.get("GROQ_KEY"))
+
+# ==============================
+# LOAD DATA
+# ==============================
+hospital_metadata_full = spark.table("hospital_metadata_full").toPandas()
+hospital_metadata_full = hospital_metadata_full.fillna("")
+
+print(f"✅ Loaded {len(hospital_metadata_full)} hospitals")
+
+# ==============================
+# LOAD EMBEDDING MODEL
+# ==============================
+model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+# ==============================
+# BUILD FAISS INDEX
+# ==============================
+print("🔄 Creating embeddings...")
+
+texts = hospital_metadata_full['search_text_full'].tolist()
+
+embeddings = model.encode(texts, show_progress_bar=True)
+embeddings = np.array(embeddings).astype("float32")
+
+# Create index
+dimension = embeddings.shape[1]
+index = faiss.IndexFlatL2(dimension)
+index.add(embeddings)
+
+print(f"✅ FAISS index built with {index.ntotal} hospitals")
+
+# ==============================
+# RAG FUNCTION
+# ==============================
+def ask_question_rag(question, k=20):
+    print("\n" + "="*60)
+    print(f"❓ QUESTION: {question}")
+    print("="*60)
+    
+    # Step 1: Question → embedding
+    query_embedding = model.encode([question]).astype("float32")
+    
+    # Step 2: Search FAISS
+    distances, indices = index.search(query_embedding, k)
+    
+    # Step 3: Get results
+    matches = hospital_metadata_full.iloc[indices[0]]
+    
+    # Step 4: Build context
+    context = ""
+    for i, (_, row) in enumerate(matches.iterrows(), 1):
+        context += f"""
+Hospital {i}: {row.get('name', 'Unknown')}
+- Region: {row.get('region_clean', 'Unknown')}
+- City: {row.get('address_city', 'Unknown')}
+- Type: {row.get('facilityTypeId', 'Unknown')}
+- Specialties: {str(row.get('specialties',''))[:150]}
+- Capability: {str(row.get('capability',''))[:150]}
+- Procedure: {str(row.get('procedure',''))[:150]}
+---"""
+    
+    # Step 5: Prompt
+    prompt = f"""You are an AI assistant helping NGO coordinators 
+at the Virtue Foundation in Ghana.
+
+Use ONLY the hospital data below.
+
+Hospital Data:
+{context}
+
+Question: {question}
+
+Give:
+1. Clear answer
+2. Key hospitals
+3. Recommendations
+4. Flag anomalies if any
+"""
+    
+    # Step 6: LLM call
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=500,
+        temperature=0.3,
+    )
+    
+    answer = response.choices[0].message.content
+    
+    # Step 7: Print
+    print(f"\n🤖 AI ANSWER:\n{answer}")
+    print(f"\n📋 BASED ON {len(matches)} HOSPITALS:")
+    
+    for _, row in matches.iterrows():
+        print(f"   • {row.get('name')} — {row.get('region_clean')} — {row.get('facilityTypeId')}")
+
+
+# ==============================
+# TEST QUESTIONS (FINAL)
+# ==============================
+
+ask_question_rag("Which hospitals are in Accra?")
+ask_question_rag("Which hospitals have emergency care?")
+ask_question_rag("Which regions lack ICU facilities?")
+ask_question_rag("Find hospitals with surgery in Ashanti region")
+ask_question_rag("Which areas are medical deserts in Ghana?")
+
+# COMMAND ----------
+
+ask_question_rag("Which hospitals are in Accra?")
+ask_question_rag("Which hospitals have emergency care?")
+ask_question_rag("Which regions lack ICU facilities?")
+ask_question_rag("Find hospitals with surgery in Ashanti region")
+ask_question_rag("Which areas are medical deserts in Ghana?")

@@ -1,17 +1,16 @@
 # Databricks notebook source
 # Install Gemini
-# %pip install google-genai -q
+#pip install google-genai -q
 
 # COMMAND ----------
 
-# MAGIC # %pip install groq -q
+# MAGIC %pip install groq -q
 
 # COMMAND ----------
 
 from groq import Groq
-import os
 
-GROQ_KEY = os.environ.get("GROQ_KEY", "")
+GROQ_KEY = os.environ.get("GROQ_KEY")  # Set in Databricks cluster env vars
 
 client = Groq(api_key=GROQ_KEY)
 
@@ -431,6 +430,11 @@ display(enriched_df[['name', 'procedure', 'equipment', 'capability']].head(5))
 # COMMAND ----------
 
 import pandas as pd
+results_df = pd.DataFrame(extracted_results)
+
+# COMMAND ----------
+
+import pandas as pd
 
 # Convert results to DataFrame
 results_df = pd.DataFrame(extracted_results)
@@ -741,3 +745,354 @@ print(f"   Total rows     : {spark_df.count()}")
 print(f"   Known regions  : {(enriched_df['region_clean'] != 'Unknown').sum()}")
 print(f"   Unknown regions: {(enriched_df['region_clean'] == 'Unknown').sum()}")
 print("\n🎉 Data is now ready for Gap Analysis!")
+
+# COMMAND ----------
+
+# ══════════════════════════════════════════════════════════════
+# NOTEBOOK 02b — IDP Extraction Using Official Virtue Foundation
+# Prompts + Pydantic Models
+# This notebook demonstrates proper use of the provided tools
+# ══════════════════════════════════════════════════════════════
+# MAGIC %pip install groq pydantic -q
+
+# COMMAND ----------
+
+import json, time, pandas as pd
+from typing import List, Optional
+from pydantic import BaseModel, Field
+from groq import Groq
+import mlflow
+
+GROQ_KEY = os.environ.get("GROQ_KEY")  # Set in Databricks cluster env vars
+client = Groq(api_key=GROQ_KEY)
+
+# ── 1. Official Pydantic Models (from facility_and_ngo_fields.py) ─
+class FacilityFacts(BaseModel):
+    """Official Virtue Foundation FacilityFacts model."""
+    procedure: Optional[List[str]] = Field(
+        description="Specific clinical services — medical/surgical interventions and diagnostic procedures"
+    )
+    equipment: Optional[List[str]] = Field(
+        description="Physical medical devices and infrastructure — imaging machines, surgical tech, lab analyzers"
+    )
+    capability: Optional[List[str]] = Field(
+        description="Medical capabilities defining care level — trauma levels, ICU/NICU, programs, accreditations"
+    )
+
+class MedicalSpecialties(BaseModel):
+    """Official Virtue Foundation MedicalSpecialties model."""
+    specialties: Optional[List[str]] = Field(
+        description="Medical specialties using exact camelCase names from the specialty hierarchy"
+    )
+
+# ── 2. Official System Prompts (from free_form.py) ───────────────
+FREE_FORM_SYSTEM_PROMPT = """
+ROLE
+You are a specialized medical facility information extractor. Your task is to analyze 
+website content to extract structured facts about healthcare facilities.
+
+Do this inference only for the following organization: `{organization}`
+
+CATEGORY DEFINITIONS
+- procedure: Clinical procedures, surgical operations, and medical interventions performed.
+- equipment: Physical medical devices, diagnostic machines, infrastructure, and utilities.
+- capability: Medical capabilities defining what level and types of clinical care the facility 
+  can deliver. Includes trauma/emergency levels, ICU/NICU, clinical programs, accreditations.
+  DO NOT include: addresses, contact info, business hours, pricing.
+
+EXTRACTION GUIDELINES
+- Use clear, declarative statements in plain English
+- Include specific quantities when available (e.g., "Has 12 ICU beds")
+- Only extract facts directly supported by the provided content
+- All arrays can be empty if no relevant facts are found
+
+Return ONLY valid JSON with keys: procedure, equipment, capability
+"""
+
+MEDICAL_SPECIALTIES_SYSTEM_PROMPT = """
+You are a medical specialty classifier for: {organization}
+
+Map the facility to specialties from this list (exact camelCase):
+internalMedicine, familyMedicine, emergencyMedicine, generalSurgery, 
+gynecologyAndObstetrics, pediatrics, cardiology, ophthalmology, dentistry,
+pathology, radiology, orthopedicSurgery, psychiatry, dermatology,
+urology, nephrology, neurology, oncology, anesthesia, infectiousDiseases,
+criticalCareMedicine, physicalMedicineAndRehabilitation, neonatologyPerinatalMedicine,
+otolaryngology, cardiacSurgery, plasticSurgery, medicalOncology
+
+Rules:
+- Generic "Hospital" with no specialty → internalMedicine
+- Generic "Clinic" → familyMedicine  
+- Contains "Dental" → dentistry
+- Contains "Eye/Ophthalm" → ophthalmology
+- Contains "Emergency/ER" → emergencyMedicine
+- Contains "Surgery/Surgical" → generalSurgery
+- Contains "Maternity/Obstetric" → gynecologyAndObstetrics
+- Contains "Pediatric/Children" → pediatrics
+- Return ONLY valid JSON: {"specialties": ["specialty1", "specialty2"]}
+"""
+
+# ── 3. IDP Extraction Function using official prompts ────────────
+def extract_with_official_prompts(row):
+    """
+    Uses the official FREE_FORM_SYSTEM_PROMPT and Pydantic models
+    as provided by the Virtue Foundation.
+    """
+    name = str(row['name'])
+    desc = str(row['description'])
+    
+    if not desc or desc == 'nan' or len(desc) < 30:
+        return None
+    
+    # Format prompt with organization name
+    system_prompt = FREE_FORM_SYSTEM_PROMPT.format(organization=name)
+    
+    user_content = f"""Organization: {name}
+
+Description:
+{desc}
+
+Extract procedure, equipment, and capability facts about {name} only.
+Return ONLY valid JSON."""
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_content}
+            ],
+            temperature=0.0,
+            max_tokens=600,
+            n=1,
+        )
+        raw = response.choices[0].message.content.strip()
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        
+        # Validate with official Pydantic model
+        data = json.loads(raw)
+        facts = FacilityFacts(**data)  # ← official Pydantic validation
+        
+        return {
+            "procedure":  facts.procedure  or [],
+            "equipment":  facts.equipment  or [],
+            "capability": facts.capability or [],
+            "pydantic_validated": True,
+        }
+    except Exception as e:
+        return {"error": str(e)[:80], "pydantic_validated": False}
+
+
+def classify_specialties(row):
+    """Uses the official MEDICAL_SPECIALTIES_SYSTEM_PROMPT."""
+    name = str(row['name'])
+    desc = str(row['description'])
+    
+    prompt = MEDICAL_SPECIALTIES_SYSTEM_PROMPT.format(organization=name)
+    
+    context = f"Organization: {name}\n\nDescription: {desc[:300]}"
+    
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user",   "content": context}
+            ],
+            temperature=0.0,
+            max_tokens=100,
+            n=1,
+        )
+        raw = response.choices[0].message.content.strip()
+        raw = raw.replace("```json","").replace("```","").strip()
+        data = json.loads(raw)
+        result = MedicalSpecialties(**data)  # ← official Pydantic validation
+        return result.specialties or []
+    except:
+        return []
+
+print("✅ Official prompts and Pydantic models loaded")
+print("   FREE_FORM_SYSTEM_PROMPT  → FacilityFacts")
+print("   MEDICAL_SPECIALTIES_PROMPT → MedicalSpecialties")
+
+# COMMAND ----------
+
+# ─────────────────────────────────────────────────────────────
+# IDP VALIDATION PIPELINE — SERVERLESS SAFE (FINAL VERSION)
+# ─────────────────────────────────────────────────────────────
+
+import os
+import mlflow
+import pandas as pd
+import time
+
+# ─────────────────────────────────────────────────────────────
+# 🔥 CRITICAL FIX — PREVENT SPARK MLflow REGISTRY ERROR
+# ─────────────────────────────────────────────────────────────
+
+os.environ["MLFLOW_TRACKING_URI"] = "databricks"
+os.environ["MLFLOW_REGISTRY_URI"] = ""   # disables registry lookup
+
+mlflow.set_tracking_uri("databricks")
+
+try:
+    mlflow.set_experiment("medical-desert-idp-agent")
+except Exception as e:
+    print(f"⚠️ Using default experiment: {str(e)[:60]}")
+
+# ─────────────────────────────────────────────────────────────
+# LOAD DATA
+# ─────────────────────────────────────────────────────────────
+
+df = spark.table("hospital_metadata_enriched").toPandas().fillna("")
+
+filtered_df = df[df['description'].str.len() > 100]
+
+sample = filtered_df.sample(
+    min(20, len(filtered_df)),
+    random_state=42
+)
+
+print(f"\nRunning IDP extraction on {len(sample)} hospitals...\n")
+
+results = []
+
+# ─────────────────────────────────────────────────────────────
+# MLflow RUN
+# ─────────────────────────────────────────────────────────────
+
+with mlflow.start_run(run_name="IDP_Official_Prompts_FINAL"):
+
+    # ───── PARAMETERS ─────
+    mlflow.log_param("prompt_source",    "Virtue Foundation free_form.py")
+    mlflow.log_param("pydantic_model",   "FacilityFacts + MedicalSpecialties")
+    mlflow.log_param("llm_model",        "llama-3.3-70b-versatile")
+    mlflow.log_param("sample_size",      len(sample))
+    mlflow.log_param("pipeline_type",    "RAG + Extraction + Evaluation")
+    mlflow.log_param("env",              "Databricks Serverless")
+
+    # Optional tags (good for resume/project clarity)
+    mlflow.set_tag("project", "medical-desert-genai")
+    mlflow.set_tag("stage",   "evaluation")
+
+    # ─────────────────────────────────────────────────────────
+    # PROCESS LOOP
+    # ─────────────────────────────────────────────────────────
+
+    for i, (_, row) in enumerate(sample.iterrows()):
+        print(f"[{i+1}/{len(sample)}] {row['name'][:45]}")
+
+        try:
+            facts = extract_with_official_prompts(row)
+            specs = classify_specialties(row)
+
+        except Exception as e:
+            print(f"   ❌ Error: {str(e)[:60]}")
+            facts = {}
+            specs = []
+
+        result = {
+            "name":               row.get('name', ""),
+            "region":             row.get('region_clean', ""),
+            "type":               row.get('facilityTypeId', ""),
+            "procedure_count":    len(facts.get('procedure', [])),
+            "equipment_count":    len(facts.get('equipment', [])),
+            "capability_count":   len(facts.get('capability', [])),
+            "specialty_count":    len(specs),
+            "pydantic_validated": facts.get('pydantic_validated', False),
+            "procedure_sample":   str(facts.get('procedure', [])[:2]),
+            "capability_sample":  str(facts.get('capability', [])[:2]),
+            "specialties":        str(specs[:3]),
+        }
+
+        results.append(result)
+
+        print(
+            f"   proc:{result['procedure_count']} | "
+            f"equip:{result['equipment_count']} | "
+            f"cap:{result['capability_count']} | "
+            f"spec:{result['specialty_count']} | "
+            f"pydantic:{'✅' if result['pydantic_validated'] else '❌'}"
+        )
+
+        time.sleep(2)  # prevent API/rate issues
+
+    # ─────────────────────────────────────────────────────────
+    # METRICS
+    # ─────────────────────────────────────────────────────────
+
+    rdf = pd.DataFrame(results)
+
+    total      = len(rdf)
+    validated  = int(rdf['pydantic_validated'].sum())
+    success    = int((rdf['procedure_count'] > 0).sum())
+
+    val_rate   = round(validated / total, 3) if total else 0
+    avg_proc   = round(rdf['procedure_count'].mean(),  2) if total else 0
+    avg_cap    = round(rdf['capability_count'].mean(), 2) if total else 0
+    avg_equip  = round(rdf['equipment_count'].mean(),  2) if total else 0
+    avg_spec   = round(rdf['specialty_count'].mean(),  2) if total else 0
+
+    # ───── LOG METRICS ─────
+    mlflow.log_metric("pydantic_validated_count",    validated)
+    mlflow.log_metric("pydantic_validation_rate",    val_rate)
+    mlflow.log_metric("avg_procedures_extracted",    avg_proc)
+    mlflow.log_metric("avg_capabilities_extracted",  avg_cap)
+    mlflow.log_metric("avg_equipment_extracted",     avg_equip)
+    mlflow.log_metric("avg_specialties_classified",  avg_spec)
+    mlflow.log_metric("successful_extractions",      success)
+    mlflow.log_metric("failed_extractions",          total - success)
+
+    # ─────────────────────────────────────────────────────────
+    # SAVE ARTIFACT
+    # ─────────────────────────────────────────────────────────
+
+    output_path = "/tmp/idp_validation_final.csv"
+    rdf.to_csv(output_path, index=False)
+
+    mlflow.log_artifact(output_path)
+
+    # Optional: Save to volume
+    try:
+        import shutil
+        shutil.copy(
+            output_path,
+            "/Volumes/workspace/default/project/idp_validation_final.csv"
+        )
+    except:
+        pass
+
+    # ─────────────────────────────────────────────────────────
+    # FINAL REPORT
+    # ─────────────────────────────────────────────────────────
+
+    print(f"""
+╔══════════════════════════════════════════════════════╗
+║        IDP VALIDATION REPORT (FINAL)                 ║
+╠══════════════════════════════════════════════════════╣
+║  Hospitals tested          : {total:<5}               ║
+║  Pydantic validated        : {validated}/{total} ({val_rate*100:.0f}%) ║
+║  Avg procedures/hospital   : {avg_proc:<5}            ║
+║  Avg capabilities/hospital : {avg_cap:<5}            ║
+║  Avg equipment/hospital    : {avg_equip:<5}          ║
+║  Avg specialties/hospital  : {avg_spec:<5}           ║
+║  Successful extractions    : {success:<5}            ║
+╠══════════════════════════════════════════════════════╣
+║  MLflow run  : IDP_Official_Prompts_FINAL            ║
+║  Artifact    : idp_validation_final.csv              ║
+╚══════════════════════════════════════════════════════╝
+""")
+
+    # ───── SAMPLE OUTPUT ─────
+    print("\nSAMPLE RESULTS:")
+    print(f"{'Hospital':<40} {'Proc':>5} {'Cap':>5} {'Spec':>5}  Validated")
+    print("-" * 65)
+
+    for _, r in rdf.iterrows():
+        v = "✅" if r['pydantic_validated'] else "❌"
+        print(
+            f"{r['name'][:39]:<40} "
+            f"{r['procedure_count']:>5} "
+            f"{r['capability_count']:>5} "
+            f"{r['specialty_count']:>5}  {v}"
+        )
