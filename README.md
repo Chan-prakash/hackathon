@@ -13,7 +13,7 @@
 ## 🌟 Live Demo & Workflow Video
 
 - **Workflow / Demo Video:** [Watch the Video (working.mp4)](https://drive.google.com/file/d/1_p0fQsiERITjyMZidQwb1knKzIeR97Kw/view?usp=sharing)
-- **Live Streamlit App:** [Insert Streamlit Cloud URL Here](https://share.streamlit.io/)
+- **Live Streamlit App:** [https://hackathon-rkgnomhfgbwhn9gwjfeoaz.streamlit.app/](https://share.streamlit.io/)
 
 ---
 
